@@ -1,0 +1,16 @@
+node_modules/
+dist/
+bundle.js
+test-results/
+playwright-report/
+.DS_Store
+
+# Plany źródłowe nie są pobierane przez aplikację produkcyjną.
+assets/gimnastyczna-parter.png
+assets/gimnastyczna-pietro-1.png
+assets/parter.png
+assets/pietro-1.png
+assets/pietro-2.png
+assets/pietro-3.png
+assets/piwnica.png
+assets/pracownie-zewnetrzne.png

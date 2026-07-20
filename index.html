@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#eef3f1" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#111815" media="(prefers-color-scheme: dark)" />
+    <meta
+      name="description"
+      content="Interaktywny plan Zespołu Szkół Zawodowych nr 5 z wyszukiwaniem sal, kondygnacji i klatek schodowych."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="pl_PL" />
+    <meta property="og:title" content="Plan szkoły | Zespół Szkół Zawodowych nr 5" />
+    <meta
+      property="og:description"
+      content="Znajdź salę, kondygnację, wejście i najbliższą klatkę schodową."
+    />
+    <meta property="og:url" content="https://nawigacja.szkolamistrzow.info/" />
+    <meta property="og:image" content="https://nawigacja.szkolamistrzow.info/assets/logo-zsz5.png" />
+    <title>Plan szkoły | Zespół Szkół Zawodowych nr 5</title>
+    <link rel="canonical" href="https://nawigacja.szkolamistrzow.info/" />
+    <link rel="icon" href="assets/logo-zsz5.png" />
+    <link rel="stylesheet" href="assets/leaflet.css" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <img
+          class="brand-logo"
+          src="assets/logo-zsz5.png"
+          width="422"
+          height="321"
+          alt=""
+          decoding="async"
+          fetchpriority="high"
+        />
+        <div>
+          <p>Zespół Szkół Zawodowych nr 5</p>
+          <h1>Plan szkoły</h1>
+        </div>
+      </div>
+      <p class="topbar-note">Znajdź salę, piętro i najbliższą klatkę schodową.</p>
+    </header>
+
+    <main class="app-shell" id="appShell">
+      <nav class="view-switch" aria-label="Wybierz rodzaj planu">
+        <button id="indoorView" type="button" aria-pressed="true">
+          <i data-lucide="building-2" aria-hidden="true"></i>
+          Plan sal
+        </button>
+        <button id="campusView" type="button" aria-pressed="false">
+          <i data-lucide="map" aria-hidden="true"></i>
+          Mapa terenu
+        </button>
+      </nav>
+
+      <section class="search-panel" aria-labelledby="searchLabel">
+        <label id="searchLabel" for="roomSearch">Wpisz numer sali lub nazwę miejsca</label>
+        <div class="search-control">
+          <i data-lucide="search" aria-hidden="true"></i>
+          <input
+            id="roomSearch"
+            type="search"
+            placeholder="np. 37, biblioteka"
+            autocomplete="off"
+            enterkeyhint="search"
+          />
+          <button id="searchClear" class="clear-button" type="button" aria-label="Wyczyść wyszukiwanie" hidden>Wyczyść</button>
+        </div>
+      </section>
+
+      <aside class="sidebar" aria-label="Informacje o salach">
+        <section class="selected-panel is-empty" id="selectedPanel" aria-live="polite">
+          <div class="selected-heading">
+            <span class="selected-icon" aria-hidden="true"><i data-lucide="map-pin"></i></span>
+            <div>
+              <p class="section-label">Wybrane miejsce</p>
+              <h2 id="selectedTitle">Wybierz salę</h2>
+            </div>
+          </div>
+          <p class="selected-meta" id="selectedMeta">Budynek główny, parter</p>
+          <p id="selectedHint">Kliknij salę na planie albo wybierz ją z listy wyników.</p>
+          <p class="stairs-hint" id="selectedStairs">Schody są oznaczone bezpośrednio na mapie.</p>
+          <button class="share-button" id="shareRoom" type="button" hidden>
+            <i data-lucide="share-2" aria-hidden="true"></i>
+            <span id="shareText">Udostępnij salę</span>
+          </button>
+        </section>
+
+        <section class="results-section" aria-labelledby="resultsTitle">
+          <div class="results-heading">
+            <h2 id="resultsTitle">Miejsca</h2>
+            <span id="resultCount" aria-label="Liczba wyników">0</span>
+          </div>
+          <div class="room-results" id="roomResults"></div>
+        </section>
+      </aside>
+
+      <section class="map-panel" aria-labelledby="floorTitle">
+        <div class="map-navigation">
+          <div class="desktop-map-filters">
+            <div class="filter-group">
+              <span class="filter-label"><i data-lucide="building-2" aria-hidden="true"></i>Budynek</span>
+              <div class="segmented-control" id="buildingButtons" aria-label="Wybierz budynek"></div>
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">Kondygnacja</span>
+              <div class="segmented-control" id="floorButtons" aria-label="Wybierz kondygnację"></div>
+            </div>
+          </div>
+
+          <div class="mobile-map-filters">
+            <label>
+              <span>Budynek</span>
+              <select id="buildingSelect" aria-label="Wybierz budynek"></select>
+            </label>
+            <label>
+              <span>Kondygnacja</span>
+              <select id="floorSelect" aria-label="Wybierz kondygnację"></select>
+            </label>
+          </div>
+        </div>
+
+        <div class="floor-header">
+          <div>
+            <p class="section-label" id="floorContext">Budynek główny</p>
+            <h2 id="floorTitle">Parter</h2>
+          </div>
+          <p id="floorNote">Wejścia, sekretariat, sala kinowa, szatnia oraz sale 1-8.</p>
+        </div>
+
+        <div class="map-viewport" id="mapViewport">
+          <canvas
+            id="schoolScene"
+            role="img"
+            aria-describedby="mapDescription"
+          >
+            Interaktywny plan kondygnacji. Wszystkie sale są również dostępne na liście wyników.
+          </canvas>
+          <p class="sr-only" id="mapDescription">Budynek główny, parter.</p>
+          <div class="fallback-map" id="fallbackMap" hidden></div>
+
+          <div class="map-controls" aria-label="Narzędzia mapy">
+            <button id="zoomIn" type="button" aria-label="Powiększ mapę" data-tooltip="Powiększ">
+              <i data-lucide="plus"></i>
+            </button>
+            <button id="zoomOut" type="button" aria-label="Pomniejsz mapę" data-tooltip="Pomniejsz">
+              <i data-lucide="minus"></i>
+            </button>
+            <button id="resetView" type="button" aria-label="Pokaż całe piętro" data-tooltip="Pokaż całe piętro">
+              <i data-lucide="locate-fixed"></i>
+            </button>
+          </div>
+
+          <p class="map-status" id="mapStatus" aria-live="polite">Wybierz salę, aby zobaczyć jej położenie.</p>
+        </div>
+      </section>
+
+      <section class="campus-panel" id="campusPanel" aria-labelledby="campusTitle" hidden>
+        <header class="campus-header">
+          <div>
+            <p class="section-label">Teren ZSZ nr 5</p>
+            <h2 id="campusTitle">Mapa budynków i wejść</h2>
+          </div>
+          <a href="https://www.openstreetmap.org/#map=19/51.094021/17.038148" target="_blank" rel="noreferrer">
+            OpenStreetMap
+            <i data-lucide="external-link" aria-hidden="true"></i>
+          </a>
+        </header>
+
+        <div class="campus-location-switch" id="campusLocationSwitch" aria-label="Wybierz obiekt na terenie szkoły">
+          <button type="button" data-campus-location="main" aria-pressed="true">Budynek główny</button>
+          <button type="button" data-campus-location="gym" aria-pressed="false">Sala gimnastyczna</button>
+          <button type="button" data-campus-location="gastronomy" aria-pressed="false">Gastronomia</button>
+          <button type="button" data-campus-location="hairdressing" aria-pressed="false">Fryzjerstwo</button>
+        </div>
+
+        <div class="campus-map-area">
+          <div id="campusMap" role="region" aria-label="Interaktywna mapa terenu szkoły"></div>
+          <section class="campus-detail" aria-live="polite">
+            <div>
+              <p class="section-label">Wybrany obiekt</p>
+              <h2 id="campusDetailTitle">Budynek główny</h2>
+              <p id="campusDetailText">Parter, trzy piętra i piwnica.</p>
+            </div>
+            <button id="campusOpenIndoor" type="button">
+              <i data-lucide="door-open" aria-hidden="true"></i>
+              Pokaż plan wnętrza
+            </button>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <script src="bundle.js" defer></script>
+  </body>
+</html>
