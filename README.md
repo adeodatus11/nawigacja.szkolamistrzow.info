@@ -30,6 +30,6 @@ Polecenie tworzy katalog `dist` zawierający wyłącznie pliki potrzebne do publ
 
 ## Publikacja
 
-Push do gałęzi `main` uruchamia workflow GitHub Pages. Domena docelowa to `nawigacja.szkolamistrzow.info`.
+Push do gałęzi `main` uruchamia workflow GitHub Pages. Do czasu skonfigurowania DNS strona działa pod adresem `https://adeodatus11.github.io/nawigacja.szkolamistrzow.info/`. Domena docelowa to `nawigacja.szkolamistrzow.info`.
 
-W DNS subdomena `nawigacja` powinna mieć rekord `CNAME` wskazujący na `adeodatus11.github.io`.
+W DNS subdomena `nawigacja` powinna mieć rekord `CNAME` wskazujący na `adeodatus11.github.io`. Po propagacji DNS domenę należy przypisać w ustawieniach GitHub Pages i włączyć wymuszanie HTTPS.
