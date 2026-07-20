@@ -146,12 +146,11 @@ export const spaces = [
   room("szatnia-nauczycieli", "SN, szatnia nauczycieli", "piwnica", rect(42, 11, 7, 7), "Dolny prawy korytarz, przed prawą klatką schodową.", "support", ["szatnia nauczycieli"], "SN"),
   room("sklepik", "Sklepik szkolny", "piwnica", rect(49, 11, 6, 7), "Obok szatni nauczycieli, w prawej części piwnicy.", "service", ["sklep", "bufet"], "SKL"),
 
-  room("fryz-parter", "Pracownia fryzjerska, skrzydło", "parter", rect(-11, 0, 11, 8), "Skrajna lewa część parteru, w osobnym skrzydle.", "workshop", ["fryzjer"], "FR"),
   room("szatnia", "PF, szatnia uczniowska", "parter", rect(0, 0, 6, 7), "Lewa górna część budynku, przed salą 5.", "support", ["szatnia", "szatnia uczniowska"], "PF"),
   room("5", "Sala 5", "parter", rect(6, 0, 9, 7), "Górny korytarz, obok szatni i lewej klatki schodowej."),
-  room("6", "Sala 6, pracownia fryzjerska", "parter", rect(15, 0, 10, 7), "Górny korytarz, między salą 5 a salą 7.", "workshop", ["fryzjer", "pracownia fryzjerska"]),
-  room("7", "Sala 7", "parter", rect(25, 0, 10, 7), "Górny korytarz, przed WC."),
-  room("wc-0", "WC męskie", "parter", rect(35, 0, 4, 7), "Górny korytarz, między salą 7 a salą 8.", "support", ["toaleta", "męskie"]),
+  room("7", "Sala 7", "parter", rect(15, 0, 6, 7), "Naprzeciw środkowej klatki schodowej, obok WC."),
+  room("wc-0", "WC męskie", "parter", rect(21, 0, 4, 7), "Naprzeciw środkowej klatki schodowej, między salami 7 i 6.", "support", ["toaleta", "męskie"]),
+  room("6", "Sala 6, pracownia fryzjerska", "parter", rect(25, 0, 14, 7), "Górny korytarz, między WC a salą 8.", "workshop", ["fryzjer", "pracownia fryzjerska"]),
   room("8", "Sala 8, sala gimnastyczna", "parter", rect(39, 0, 9, 7), "Górny prawy korytarz, przed prawą klatką schodową.", "gym", ["hala", "sala gimnastyczna"]),
   room("portiernia", "PI, portiernia", "parter", rect(52, -2, 8, 6.5), "Prawa część parteru przy wejściu i prawej klatce schodowej.", "service", ["monitoring", "portier"], "PI"),
   room("sala-kinowa", "SK, sala kinowa", "parter", rect(-6, 11, 6, 11), "Lewa część parteru, przy przejściu do pracowni fryzjerskiej.", "service", ["kino", "aula", "sala kinowa"], "SK"),
@@ -224,6 +223,7 @@ export const structuralSpaces = [
   { id: "piwnica-naroznik", floorId: "piwnica", polygon: rect(51, -2, 9, 8.5) },
   { id: "piwnica-magazyn", floorId: "piwnica", polygon: rect(10, 7, 10, 4) },
   { id: "piwnica-magazynek", floorId: "piwnica", polygon: rect(34, 7, 6, 4) },
+  { id: "parter-lewe-skrzydlo", floorId: "parter", polygon: rect(-11, 0, 11, 8) },
   { id: "parter-dawna-1a", floorId: "parter", polygon: rect(49, 11, 5, 7) },
   { id: "parter-prawy-naroznik", floorId: "parter", polygon: rect(54, 11, 6, 7) },
 ];

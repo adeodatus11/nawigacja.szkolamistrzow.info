@@ -126,6 +126,24 @@ test("zaktualizowane funkcje pomieszczeń są dostępne pod właściwymi numeram
   }
 });
 
+test("parter ma poprawiony układ sal 6 i 7 bez fikcyjnej sali FR", async ({ page }) => {
+  await page.goto("/?floor=parter");
+
+  const parter = await page.evaluate(async () => {
+    const { spaces } = await import("/map-data.js");
+    return spaces
+      .filter((space) => space.floorId === "parter")
+      .map(({ id, name, polygon }) => ({ id, name, polygon }));
+  });
+
+  expect(parter.some(({ id }) => id === "fryz-parter")).toBe(false);
+  expect(parter.find(({ id }) => id === "7")?.polygon).toEqual([[15, 0], [21, 0], [21, 7], [15, 7]]);
+  expect(parter.find(({ id }) => id === "wc-0")?.polygon).toEqual([[21, 0], [25, 0], [25, 7], [21, 7]]);
+  expect(parter.find(({ id }) => id === "6")?.polygon).toEqual([[25, 0], [39, 0], [39, 7], [25, 7]]);
+
+  await expect(page.locator(".map-room-label", { hasText: /^FR$/ })).toHaveCount(0);
+});
+
 test("piwnica pokazuje tylko wskazane miejsca, a sala 1a nie występuje", async ({ page }) => {
   await page.goto("/?floor=piwnica");
   await expect(page.locator(".room-result")).toHaveCount(6);
@@ -135,7 +153,7 @@ test("piwnica pokazuje tylko wskazane miejsca, a sala 1a nie występuje", async 
   await expect(page.locator(".room-result")).toHaveCount(0);
 
   await page.goto("/?fallback=1&floor=parter");
-  await expect(page.locator(".svg-structure")).toHaveCount(2);
+  await expect(page.locator(".svg-structure")).toHaveCount(3);
   await expect(page.locator('[data-svg-room="1a"]')).toHaveCount(0);
 });
 
