@@ -189,6 +189,12 @@ const scenePalette = () => prefersDark.matches
       corridor: 0x33433c,
       room: 0xe6eee9,
       roomSide: 0xaebbb4,
+      classroom: 0x4f8199,
+      classroomSide: 0x31586b,
+      administration: 0x9b7a32,
+      administrationSide: 0x604a1d,
+      gym: 0x5d875f,
+      gymSide: 0x38563b,
       edge: 0x71817a,
       accent: 0x57c5b7,
       accentSide: 0x237e73,
@@ -202,6 +208,12 @@ const scenePalette = () => prefersDark.matches
       corridor: 0xf8faf9,
       room: 0xffffff,
       roomSide: 0xcbd7d1,
+      classroom: 0xcfe6f1,
+      classroomSide: 0x9abecd,
+      administration: 0xf2dfaa,
+      administrationSide: 0xc7ad62,
+      gym: 0xcfe4cb,
+      gymSide: 0x94b68e,
       edge: 0x8a9a93,
       accent: 0x0f766e,
       accentSide: 0x095b55,
@@ -333,6 +345,13 @@ const materialFor = (topColor, sideColor, roughness = 0.82) => [
   new THREE.MeshStandardMaterial({ color: topColor, roughness }),
 ];
 
+const roomTypeFor = (space) => {
+  if (space.category === "administration") return "administration";
+  if (space.category === "gym") return "gym";
+  if (["classroom", "workshop"].includes(space.category)) return "classroom";
+  return "neutral";
+};
+
 const addPolygonMesh = ({ polygon, height, y = 0, topColor, sideColor, edgeColor, edgeOpacity = 0.5 }) => {
   const geometry = makeExtrudedGeometry(polygon, height);
   const mesh = new THREE.Mesh(geometry, materialFor(topColor, sideColor));
@@ -365,12 +384,15 @@ const makeTextLabel = (text, className, position) => {
 const addRoom = (space, palette) => {
   const selected = space.id === state.activeRoomId;
   const height = selected ? 0.92 : 0.42;
+  const roomType = roomTypeFor(space);
+  const topColor = palette[roomType] || palette.room;
+  const sideColor = palette[`${roomType}Side`] || palette.roomSide;
   const mesh = addPolygonMesh({
     polygon: space.polygon,
     height,
     y: 0.03,
-    topColor: selected ? palette.accent : palette.room,
-    sideColor: selected ? palette.accentSide : palette.roomSide,
+    topColor: selected ? palette.accent : topColor,
+    sideColor: selected ? palette.accentSide : sideColor,
     edgeColor: selected ? palette.accentSide : palette.edge,
     edgeOpacity: selected ? 0.95 : 0.7,
   });
@@ -647,7 +669,7 @@ const renderResults = () => {
     const selected = space.id === state.activeRoomId;
     return `
       <button
-        class="room-result${selected ? " is-selected" : ""}"
+        class="room-result room-type-${roomTypeFor(space)}${selected ? " is-selected" : ""}"
         type="button"
         data-room="${space.id}"
         aria-pressed="${selected}"
@@ -689,7 +711,7 @@ const renderFallbackMap = () => {
         <polygon class="svg-structure" points="${polygonPoints(space.polygon)}" />
       `).join("")}
       ${spacesOnFloor(floor.id).map((space) => `
-        <g class="svg-room${space.id === selectedId ? " is-selected" : ""}" data-svg-room="${space.id}">
+        <g class="svg-room room-type-${roomTypeFor(space)}${space.id === selectedId ? " is-selected" : ""}" data-svg-room="${space.id}">
           <title>${space.name}</title>
           <polygon points="${polygonPoints(space.polygon)}" />
           <text x="${space.labelPoint[0]}" y="${space.labelPoint[1]}" text-anchor="middle" dominant-baseline="middle">${shortRoomLabel(space)}</text>

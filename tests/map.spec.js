@@ -60,6 +60,27 @@ test("fallback SVG korzysta z tych samych danych", async ({ page }) => {
   await expect(page.locator(".svg-stairs line")).toHaveCount(18);
 });
 
+test("kolory rozróżniają sale lekcyjne, administrację i sale gimnastyczne", async ({ page }) => {
+  await page.goto("/?fallback=1&floor=parter");
+
+  await expect(page.locator(".room-legend li")).toHaveText([
+    "Sale lekcyjne / pracownie",
+    "Administracja",
+    "Sale gimnastyczne",
+  ]);
+  await expect(page.locator('[data-svg-room="7"]')).toHaveClass(/room-type-classroom/);
+  await expect(page.locator('[data-svg-room="1"]')).toHaveClass(/room-type-administration/);
+  await expect(page.locator('[data-svg-room="8"]')).toHaveClass(/room-type-gym/);
+  await expect(page.locator('[data-room="7"]')).toHaveClass(/room-type-classroom/);
+  await expect(page.locator('[data-room="1"]')).toHaveClass(/room-type-administration/);
+  await expect(page.locator('[data-room="8"]')).toHaveClass(/room-type-gym/);
+
+  const fills = await Promise.all(["7", "1", "8"].map((roomId) => (
+    page.locator(`[data-svg-room="${roomId}"] polygon`).evaluate((element) => getComputedStyle(element).fill)
+  )));
+  expect(new Set(fills).size).toBe(3);
+});
+
 test("najechanie na pomieszczenie pokazuje jego pełną nazwę", async ({ page }) => {
   await page.goto("/?floor=pietro-3");
   const roomLabel = page.locator(".map-room-label", { hasText: "37" });
