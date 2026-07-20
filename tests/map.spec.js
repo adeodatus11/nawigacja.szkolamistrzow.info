@@ -158,11 +158,22 @@ test("parter ma poprawiony układ sal 6 i 7 bez fikcyjnej sali FR", async ({ pag
   });
 
   expect(parter.some(({ id }) => id === "fryz-parter")).toBe(false);
+  expect(parter.find(({ id }) => id === "szatnia")?.polygon).toEqual([[0, 0], [3, 0], [3, 7], [0, 7]]);
+  expect(parter.find(({ id }) => id === "5")?.polygon).toEqual([[3, 0], [15, 0], [15, 7], [3, 7]]);
   expect(parter.find(({ id }) => id === "7")?.polygon).toEqual([[15, 0], [21, 0], [21, 7], [15, 7]]);
   expect(parter.find(({ id }) => id === "wc-0")?.polygon).toEqual([[21, 0], [25, 0], [25, 7], [21, 7]]);
   expect(parter.find(({ id }) => id === "6")?.polygon).toEqual([[25, 0], [39, 0], [39, 7], [25, 7]]);
 
   await expect(page.locator(".map-room-label", { hasText: /^FR$/ })).toHaveCount(0);
+  await expect(page.locator(".map-room-label", { hasText: /^05$/ })).toHaveCount(1);
+});
+
+test("dotychczasowy link do sali 5 otwiera salę 05", async ({ page }) => {
+  await page.goto("/?room=5");
+
+  await expect(page.locator("#selectedTitle")).toHaveText("Sala 05");
+  await expect(page.locator(".map-room-label.is-selected")).toHaveText("05");
+  await expect(page.locator("#selectedHint")).toContainText("Naprzeciw lewej klatki schodowej");
 });
 
 test("piwnica pokazuje tylko wskazane miejsca, a sala 1a nie występuje", async ({ page }) => {

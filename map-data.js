@@ -146,8 +146,8 @@ export const spaces = [
   room("szatnia-nauczycieli", "SN, szatnia nauczycieli", "piwnica", rect(42, 11, 7, 7), "Dolny prawy korytarz, przed prawą klatką schodową.", "support", ["szatnia nauczycieli"], "SN"),
   room("sklepik", "Sklepik szkolny", "piwnica", rect(49, 11, 6, 7), "Obok szatni nauczycieli, w prawej części piwnicy.", "service", ["sklep", "bufet"], "SKL"),
 
-  room("szatnia", "PF, szatnia uczniowska", "parter", rect(0, 0, 6, 7), "Lewa górna część budynku, przed salą 5.", "support", ["szatnia", "szatnia uczniowska"], "PF"),
-  room("5", "Sala 5", "parter", rect(6, 0, 9, 7), "Górny korytarz, obok szatni i lewej klatki schodowej."),
+  room("szatnia", "PF, szatnia uczniowska", "parter", rect(0, 0, 3, 7), "Niewielki lewy narożnik parteru, obok sali 05.", "support", ["szatnia", "szatnia uczniowska"], "PF"),
+  room("5", "Sala 05", "parter", rect(3, 0, 12, 7), "Naprzeciw lewej klatki schodowej, obok szatni uczniowskiej.", "classroom", ["05", "sala 5", "sala 05"], "05"),
   room("7", "Sala 7", "parter", rect(15, 0, 6, 7), "Naprzeciw środkowej klatki schodowej, obok WC."),
   room("wc-0", "WC męskie", "parter", rect(21, 0, 4, 7), "Naprzeciw środkowej klatki schodowej, między salami 7 i 6.", "support", ["toaleta", "męskie"]),
   room("6", "Sala 6, pracownia fryzjerska", "parter", rect(25, 0, 14, 7), "Górny korytarz, między WC a salą 8.", "workshop", ["fryzjer", "pracownia fryzjerska"]),
