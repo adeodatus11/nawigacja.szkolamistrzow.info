@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#eef3f1" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#111815" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f3f2ef" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#191918" media="(prefers-color-scheme: dark)" />
     <meta
       name="description"
       content="Interaktywny plan Zespołu Szkół Zawodowych nr 5 z wyszukiwaniem sal, kondygnacji i klatek schodowych."
@@ -24,6 +24,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="assets/branding/ikona/ikona-16.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="assets/branding/ikona/ikona-180.png" />
     <link rel="stylesheet" href="assets/leaflet.css" />
+    <link rel="preload" href="assets/fonts/jost-variable.ttf" as="font" type="font/ttf" crossorigin />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -43,10 +44,6 @@
         </picture>
         <h1 class="sr-only">Plan szkoły</h1>
       </div>
-      <p class="topbar-note">Znajdź salę, piętro i najbliższą klatkę schodową.</p>
-    </header>
-
-    <main class="app-shell" id="appShell">
       <nav class="view-switch" aria-label="Wybierz rodzaj planu">
         <button id="indoorView" type="button" aria-pressed="true">
           <i data-lucide="building-2" aria-hidden="true"></i>
@@ -57,7 +54,10 @@
           Mapa terenu
         </button>
       </nav>
+      <p class="topbar-note">Znajdź salę, piętro i najbliższą klatkę schodową.</p>
+    </header>
 
+    <main class="app-shell" id="appShell">
       <section class="search-panel" aria-labelledby="searchLabel">
         <label id="searchLabel" for="roomSearch">Wpisz numer sali lub nazwę miejsca</label>
         <div class="search-control">

@@ -1,48 +1,62 @@
+/* School wayfinding: Jost, sign orange, 6px controls / 10px panels.
+   Visual variance 3, motion 2, density 5. Existing map semantics preserved. */
+@font-face {
+  font-family: "Jost";
+  src: url("assets/fonts/jost-variable.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
 :root {
   color-scheme: light dark;
-  --page: #eef3f1;
-  --surface: #fbfdfc;
-  --surface-strong: #fcfefd;
-  --surface-muted: #e5ece9;
-  --ink: #17201d;
-  --muted: #576660;
-  --line: #cbd7d1;
-  --accent: #0f766e;
-  --accent-strong: #095b55;
-  --accent-soft: #d7eeea;
-  --focus: #0b8077;
-  --map-background: #eef3f1;
+  --page: #f3f2ef;
+  --surface: #fdfcf9;
+  --surface-strong: #fffefa;
+  --surface-muted: #eeece7;
+  --ink: #242421;
+  --muted: #65625c;
+  --line: #d5d1c9;
+  --accent: #ad4700;
+  --accent-strong: #913b00;
+  --accent-soft: #fff0df;
+  --focus: #ad4700;
+  --map-background: #f3f2ef;
   --room-classroom: #cfe6f1;
   --room-classroom-line: #4f7f96;
   --room-administration: #f2dfaa;
   --room-administration-line: #8a6a22;
   --room-gym: #cfe4cb;
   --room-gym-line: #4d7a50;
-  --shadow: 0 12px 32px rgba(31, 54, 46, 0.1);
-  --radius: 8px;
+  --shadow: 0 3px 12px rgba(55, 45, 30, 0.04);
+  --radius: 10px;
+  --brand: #d35f00;
+  --on-accent: #fffefa;
+  --header-height: 106px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --page: #111815;
-    --surface: #17211d;
-    --surface-strong: #1c2823;
-    --surface-muted: #24332d;
-    --ink: #edf4f1;
-    --muted: #a9b9b2;
-    --line: #394a43;
-    --accent: #57c5b7;
-    --accent-strong: #78d5c9;
-    --accent-soft: #1b403a;
-    --focus: #78d5c9;
-    --map-background: #111815;
+    --page: #191918;
+    --surface: #222220;
+    --surface-strong: #2a2a27;
+    --surface-muted: #33332f;
+    --ink: #f6f3ec;
+    --muted: #c1bdb4;
+    --line: #4c4a43;
+    --accent: #ffab66;
+    --accent-strong: #ffbd87;
+    --accent-soft: #443020;
+    --focus: #ffbd87;
+    --map-background: #191918;
     --room-classroom: #31596d;
     --room-classroom-line: #89bfd7;
     --room-administration: #6d5725;
     --room-administration-line: #e0c36e;
     --room-gym: #385c3c;
     --room-gym-line: #93c996;
-    --shadow: 0 12px 32px rgba(0, 0, 0, 0.26);
+    --shadow: 0 3px 12px rgba(0, 0, 0, 0.12);
+    --on-accent: #2c2118;
   }
 }
 
@@ -67,6 +81,7 @@ body {
   background: var(--page);
   color: var(--ink);
   font-family:
+    "Jost",
     ui-sans-serif,
     system-ui,
     -apple-system,
@@ -121,11 +136,11 @@ p {
   position: relative;
   z-index: 3;
   display: flex;
-  min-height: 68px;
+  min-height: var(--header-height);
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 10px 22px;
+  padding: 12px 24px;
   border-bottom: 1px solid var(--line);
   background: var(--surface);
 }
@@ -144,7 +159,7 @@ p {
 .brand-logo {
   display: block;
   width: auto;
-  height: 80px;
+  height: 78px;
   max-width: 100%;
   object-fit: contain;
 }
@@ -191,20 +206,18 @@ p {
 
 .app-shell {
   display: grid;
-  height: calc(100dvh - 101px);
+  height: calc(100dvh - var(--header-height));
   min-height: 0;
   grid-template-areas:
-    "view view"
     "search map"
     "sidebar map";
   grid-template-columns: minmax(310px, 350px) minmax(0, 1fr);
-  grid-template-rows: auto auto minmax(0, 1fr);
-  gap: 12px;
-  padding: 12px;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 16px;
+  padding: 18px 24px 24px;
 }
 
 .view-switch {
-  grid-area: view;
   display: flex;
   width: fit-content;
   gap: 4px;
@@ -226,15 +239,14 @@ p {
 .view-switch button[aria-pressed="true"] {
   border-color: var(--accent);
   background: var(--accent);
-  color: #f7fffd;
+  color: var(--on-accent);
 }
 
 .app-shell.is-campus {
   grid-template-areas:
-    "view"
     "campus";
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .app-shell.is-campus .search-panel,
@@ -377,7 +389,7 @@ p {
   border: 1px solid var(--accent);
   border-radius: 6px;
   background: var(--accent);
-  color: #f7fffd;
+  color: var(--on-accent);
   padding: 0 13px;
   font-weight: 700;
   white-space: nowrap;
@@ -388,7 +400,7 @@ p {
 }
 
 .leaflet-control-zoom a {
-  color: #17201d;
+  color: #242421;
 }
 
 .leaflet-tooltip.campus-label,
@@ -545,7 +557,7 @@ p {
   border: 1px solid var(--accent);
   border-radius: var(--radius);
   background: var(--accent);
-  color: #f7fffd;
+  color: var(--on-accent);
   padding: 0 13px;
   font-weight: 700;
   white-space: nowrap;
@@ -635,7 +647,7 @@ p {
 .room-result.is-selected .room-number {
   background: var(--accent);
   box-shadow: none;
-  color: #f7fffd;
+  color: var(--on-accent);
 }
 
 .room-result-copy {
@@ -729,7 +741,7 @@ p {
 .floor-button[aria-pressed="true"] {
   border-color: var(--accent);
   background: var(--accent);
-  color: #f7fffd;
+  color: var(--on-accent);
 }
 
 .mobile-map-filters {
@@ -874,7 +886,7 @@ p {
 .map-room-label.is-selected {
   border-color: var(--accent);
   background: var(--accent);
-  color: #f7fffd;
+  color: var(--on-accent);
   font-size: 0.8rem;
 }
 
@@ -1035,7 +1047,7 @@ p {
 }
 
 .svg-room.is-selected text {
-  fill: #f7fffd;
+  fill: var(--on-accent);
 }
 
 .svg-room:not(.is-selected):hover polygon {
@@ -1105,12 +1117,11 @@ p {
     display: grid;
     height: auto;
     grid-template-areas:
-      "view"
       "search"
       "map"
       "sidebar";
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto auto auto;
+    grid-template-rows: auto auto auto;
     gap: 8px;
     padding: 8px;
   }
@@ -1123,10 +1134,8 @@ p {
   }
 
   .app-shell.is-campus {
-    grid-template-areas:
-      "view"
-      "campus";
-    grid-template-rows: auto auto;
+    grid-template-areas: "campus";
+    grid-template-rows: auto;
   }
 
   .campus-panel {
@@ -1331,4 +1340,134 @@ p {
   .brand-logo {
     height: 50px;
   }
+}
+
+/* Wayfinding components */
+.topbar {
+  border-bottom: 3px solid var(--brand);
+}
+.topbar-note {
+  max-width: 230px;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+.view-switch { gap: 8px; }
+.view-switch button {
+  min-height: 48px;
+  padding: 0 20px;
+  font-size: 1rem;
+  border-width: 2px;
+}
+.view-switch button[aria-pressed="true"],
+.building-button[aria-pressed="true"],
+.floor-button[aria-pressed="true"],
+.campus-location-switch button[aria-pressed="true"],
+.share-button,
+.campus-detail button {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 2px var(--accent), inset 0 0 0 3px var(--on-accent);
+}
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+button:focus-visible, a:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+.search-panel {
+  border-top: 4px solid var(--brand);
+  padding: 18px;
+}
+.search-panel > label { font-size: 1rem; }
+.search-control input {
+  min-height: 52px;
+  border-width: 2px;
+  background: var(--surface-strong);
+}
+.search-control input::placeholder { color: var(--muted); }
+.sidebar { padding: 16px; scrollbar-color: var(--line) transparent; }
+.selected-panel {
+  border: 1px solid var(--accent);
+  border-left-width: 5px;
+  padding: 16px;
+}
+.selected-panel.is-empty {
+  background: var(--surface-muted);
+  border-color: var(--line);
+  border-left-color: var(--brand);
+}
+.selected-icon { color: var(--accent); background: var(--surface); }
+.selected-heading h2 { font-size: 1.35rem; font-weight: 650; }
+.selected-panel > p { font-size: 0.94rem; }
+.results-heading { padding: 0 2px 8px; border-bottom: 1px solid var(--line); }
+.results-heading h2 { font-size: 1.12rem; }
+.results-heading span { border-radius: 6px; }
+.room-results { gap: 3px; }
+.room-result {
+  min-height: 66px;
+  padding: 9px 7px;
+  border-bottom-color: var(--line);
+  border-radius: 6px;
+}
+.room-number { font-size: 1rem; }
+.room-result-copy strong { font-size: 0.94rem; font-weight: 600; }
+.room-result-copy small { font-size: 0.8rem; }
+.room-result-arrow { color: var(--accent); }
+.map-navigation { padding: 14px 18px; }
+.filter-label, .mobile-map-filters label > span { font-size: 0.8rem; }
+.building-button, .floor-button { padding: 0 14px; font-size: 0.9rem; }
+.floor-header { padding: 15px 18px; }
+.floor-header > div:first-child {
+  border-left: 4px solid var(--brand);
+  padding-left: 12px;
+  flex-shrink: 0;
+}
+.floor-header h2 { font-size: 1.65rem; font-weight: 650; }
+.floor-summary > p { font-size: 0.9rem; }
+.map-room-label { border-radius: 4px; font-size: 0.78rem; }
+.map-landmark-label { border-radius: 4px; }
+.map-controls { gap: 7px; }
+.map-controls button { border-width: 2px; border-radius: 6px; box-shadow: none; }
+.map-status { border-left: 4px solid var(--brand); box-shadow: none; }
+.campus-header { padding: 16px 18px; border-top: 4px solid var(--brand); }
+.campus-header h2 { font-size: 1.45rem; }
+.campus-detail { border-left: 4px solid var(--brand); background: var(--surface-strong); }
+#campusMap { background: var(--map-background); }
+@media (min-width: 901px) {
+  .app-shell.is-campus { grid-template-rows: minmax(0, 1fr); }
+}
+@media (max-width: 1100px) and (min-width: 901px) {
+  .topbar-note { display: none; }
+  .app-shell { padding: 16px; gap: 12px; }
+}
+@media (max-width: 900px) {
+  .topbar {
+    min-height: 0;
+    padding: 10px 14px;
+    gap: 16px;
+  }
+  .brand-logo { height: 64px; }
+  .view-switch button { min-height: 46px; padding: 0 14px; }
+  .app-shell { padding: 12px; gap: 12px; }
+  .search-panel { padding: 12px; }
+  .search-panel > label { font-size: 0.94rem; }
+  .map-navigation { padding: 12px; }
+  .floor-header { padding: 12px; }
+  .floor-header h2 { font-size: 1.4rem; }
+  .floor-summary { margin-top: 10px; }
+  .floor-summary > p { font-size: 0.85rem; }
+  .campus-header { padding: 12px; }
+  .campus-header h2 { font-size: 1.2rem; }
+  .campus-detail { border-left-width: 0; }
+}
+@media (max-width: 640px) {
+  .topbar { flex-wrap: wrap; gap: 12px; padding: 12px; }
+  .brand-logo { height: 50px; }
+  .view-switch { width: 100%; }
+  .view-switch button { flex: 1; justify-content: center; }
+  .app-shell { padding: 10px; gap: 10px; }
+  .floor-summary > p { font-size: 0.84rem; }
+  .room-legend { font-size: 0.7rem; gap: 5px 10px; }
 }
