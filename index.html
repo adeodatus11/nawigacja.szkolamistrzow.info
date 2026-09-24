@@ -17,29 +17,31 @@
       content="Znajdź salę, kondygnację, wejście i najbliższą klatkę schodową."
     />
     <meta property="og:url" content="https://nawigacja.szkolamistrzow.info/" />
-    <meta property="og:image" content="https://nawigacja.szkolamistrzow.info/assets/logo-zsz5.png" />
+    <meta property="og:image" content="https://nawigacja.szkolamistrzow.info/assets/branding/ikona/ikona-512.png" />
     <title>Plan szkoły | Zespół Szkół Zawodowych nr 5</title>
     <link rel="canonical" href="https://nawigacja.szkolamistrzow.info/" />
-    <link rel="icon" href="assets/logo-zsz5.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/branding/ikona/ikona-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/branding/ikona/ikona-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/branding/ikona/ikona-180.png" />
     <link rel="stylesheet" href="assets/leaflet.css" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <header class="topbar">
       <div class="brand">
-        <img
-          class="brand-logo"
-          src="assets/logo-zsz5.png"
-          width="422"
-          height="321"
-          alt=""
-          decoding="async"
-          fetchpriority="high"
-        />
-        <div>
-          <p>Zespół Szkół Zawodowych nr 5</p>
-          <h1>Plan szkoły</h1>
-        </div>
+        <picture>
+          <source media="(max-width: 640px)" srcset="assets/branding/telefon/logo-nawigacja-telefon.png" width="832" height="200" />
+          <img
+            class="brand-logo"
+            src="assets/branding/komputer/logo-nawigacja-komputer.png"
+            width="1412"
+            height="456"
+            alt="Szkoła Mistrzów – Nawigacja, ZSZ5 we Wrocławiu"
+            decoding="async"
+            fetchpriority="high"
+          />
+        </picture>
+        <h1 class="sr-only">Plan szkoły</h1>
       </div>
       <p class="topbar-note">Znajdź salę, piętro i najbliższą klatkę schodową.</p>
     </header>

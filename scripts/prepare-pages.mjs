@@ -19,6 +19,7 @@ for (const file of ["leaflet.css", "logo-zsz5.png"]) {
 await cp(path.join(root, "assets", "images"), path.join(dist, "assets", "images"), {
   recursive: true,
 });
+await cp(path.join(root, "assets", "branding"), path.join(dist, "assets", "branding"), { recursive: true });
 await writeFile(path.join(dist, ".nojekyll"), "", "utf8");
 
 console.log(`Gotowy artefakt GitHub Pages: ${dist}`);
