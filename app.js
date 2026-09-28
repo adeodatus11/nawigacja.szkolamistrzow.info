@@ -227,6 +227,10 @@ const viewKey = () => `${state.floorId}:${state.mode}:${els.mapViewport.clientWi
 
 const floorGroup = new THREE.Group();
 scene.add(floorGroup);
+let renderElevation = 0;
+const isSection = () => state.mode === '2.5d' && state.buildingId === 'main';
+const sectionFloors = () => floors.filter((floor) => floor.buildingId === 'main').sort((a, b) => a.level - b.level);
+const sectionSpacing = () => els.mapViewport.clientWidth < 700 ? 30 : 21;
 
 const roomMeshes = new Map();
 const roomLabels = new Map();
@@ -304,9 +308,10 @@ const materialFor = (topColor, sideColor) => [
 ];
 
 const addPolygonMesh = ({ polygon, height, y = 0, topColor, sideColor, edgeColor, edgeOpacity = 0.5 }) => {
-  const geometry = makeExtrudedGeometry(polygon, height);
+  const geometry = isSection() ? new THREE.ShapeGeometry(shapeFromPolygon(polygon)).rotateX(-Math.PI / 2) : makeExtrudedGeometry(polygon, height);
+  if (isSection()) geometry.addGroup(0, geometry.index.count, 0);
   const mesh = new THREE.Mesh(geometry, materialFor(topColor, sideColor));
-  mesh.position.y = y;
+  mesh.position.y = y + renderElevation;
   mesh.castShadow = height > 0.12;
   mesh.receiveShadow = true;
   floorGroup.add(mesh);
@@ -316,7 +321,7 @@ const addPolygonMesh = ({ polygon, height, y = 0, topColor, sideColor, edgeColor
       new THREE.EdgesGeometry(geometry, 24),
       new THREE.LineBasicMaterial({ color: edgeColor, transparent: true, opacity: edgeOpacity }),
     );
-    edges.position.y = y + 0.003;
+    edges.position.y = y + renderElevation + 0.003;
     floorGroup.add(edges);
   }
   return mesh;
@@ -355,12 +360,12 @@ const makeTextLabel = (text, className, position) => {
     element.addEventListener('click', showName);
     element.addEventListener('blur', () => { roomHoverTooltip.hidden = true; });
   }
-  return labelRenderer.add(element, position, className.includes('is-selected') ? 10 : className.includes('is-stairs') ? 7 : className.includes('is-entrance') ? 6 : 3);
+  return labelRenderer.add(element, [position[0], position[1] + renderElevation, position[2]], className.includes('section-floor-label') ? 12 : className.includes('is-selected') ? 10 : className.includes('is-stairs') ? 7 : className.includes('is-entrance') ? 6 : 3);
 };
 
 const addRoom = (space, palette) => {
   const selected = space.id === state.activeRoomId;
-  const height = state.mode === '2d' ? 0.08 : selected ? 0.62 : 0.25;
+  const height = 0.08;
   const roomType = roomTypeFor(space);
   const topColor = palette[roomType] || palette.room;
   const sideColor = palette[`${roomType}Side`] || palette.roomSide;
@@ -386,6 +391,7 @@ const addRoom = (space, palette) => {
   );
   roomLabels.set(space.id, label.element);
   label.element.dataset.labelRoom = space.id;
+  label.element.dataset.labelFloor = space.floorId;
   label.element.setAttribute('aria-label', space.name);
   label.element.setAttribute('aria-pressed', String(selected));
   label.element.title = space.name;
@@ -428,13 +434,15 @@ const addStairs = (connector, palette) => {
 
   const stairMaterial = new THREE.MeshBasicMaterial({ color: palette.step });
   for (const tread of stairLayout(connector)) {
-    const height = state.mode === '2d' ? 0.035 : tread.height;
-    const step = new THREE.Mesh(new THREE.BoxGeometry(tread.width, height, tread.depth), stairMaterial);
-    step.position.set(tread.x + tread.width / 2, 0.13 + height / 2, tread.z + tread.depth / 2);
+    const height = 0.035;
+    const geometry = isSection() ? new THREE.PlaneGeometry(tread.width, tread.depth).rotateX(-Math.PI / 2) : new THREE.BoxGeometry(tread.width, height, tread.depth);
+    const step = new THREE.Mesh(geometry, stairMaterial);
+    step.position.set(tread.x + tread.width / 2, renderElevation + 0.13 + height / 2, tread.z + tread.depth / 2);
     step.add(new THREE.LineSegments(new THREE.EdgesGeometry(step.geometry), new THREE.LineBasicMaterial({ color: palette.edge })));
     floorGroup.add(step);
   }
 
+  if (isSection() && (connector.floorId !== state.floorId || els.mapViewport.clientWidth < 700)) return;
   const stairLabel = makeTextLabel("Schody", "map-landmark-label is-stairs", [connector.labelPoint[0], 0.9, connector.labelPoint[1]]);
   stairLabel.element.setAttribute('aria-label', `Schody, ${connector.id.includes('left') ? 'lewa klatka' : connector.id.includes('right') ? 'prawa klatka' : 'środkowa klatka'}`);
   if (activeRoom() && accessForRoom(activeRoom()).stairId === connector.id) stairLabel.element.classList.add('is-nearest');
@@ -456,6 +464,11 @@ const rebuildScene = () => {
   const floor = currentFloor();
   scene.background = new THREE.Color(palette.background);
 
+  const visibleFloors = isSection() ? sectionFloors() : [floor];
+  els.mapViewport.dataset.visibleFloors = visibleFloors.map((item) => item.id).join(',');
+  visibleFloors.forEach((floor, index) => {
+  renderElevation = isSection() ? index * sectionSpacing() : 0;
+
   floorOutlines(floor).forEach((outline) => addPolygonMesh({
     polygon: outline,
     height: 0.24,
@@ -476,10 +489,32 @@ const rebuildScene = () => {
     edgeOpacity: 0.3,
   }));
 
-  structuralSpacesOnFloor(state.floorId).forEach((space) => addStructuralSpace(space, palette));
-  spacesOnFloor(state.floorId).forEach((space) => addRoom(space, palette));
-  connectorsOnFloor(state.floorId).forEach((connector) => addStairs(connector, palette));
-  landmarksOnFloor(state.floorId).forEach(addLandmark);
+  structuralSpacesOnFloor(floor.id).forEach((space) => addStructuralSpace(space, palette));
+  spacesOnFloor(floor.id).forEach((space) => addRoom(space, palette));
+  connectorsOnFloor(floor.id).forEach((connector) => addStairs(connector, palette));
+  if (!isSection()) landmarksOnFloor(floor.id).forEach(addLandmark);
+  if (isSection()) {
+    const label = makeTextLabel(floor.shortTitle, `section-floor-label${floor.id === state.floorId ? ' is-active' : ''}`, [-17, 1, 12]);
+    label.element.dataset.sectionFloor = floor.id;
+    label.element.setAttribute('aria-label', `${floor.shortTitle}: otwórz rzut`);
+    label.element.addEventListener('pointerdown', (event) => event.stopPropagation());
+    label.element.addEventListener('click', (event) => {
+      event.stopPropagation();
+      state.mode = '2d';
+      setFloor(floor.id);
+    });
+  }
+  });
+  renderElevation = 0;
+  if (isSection()) {
+    // Alignment guides, not a proposed circulation route or measured structural columns.
+    for (const x of [0, 60]) {
+      const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x, 0, 0), new THREE.Vector3(x, sectionSpacing() * 4, 0)]);
+      const guide = new THREE.Line(geometry, new THREE.LineDashedMaterial({ color: palette.edge, dashSize: 0.5, gapSize: 0.5, transparent: true, opacity: 0.4 }));
+      guide.computeLineDistances();
+      floorGroup.add(guide);
+    }
+  }
 
   if (renderedViewKey !== viewKey()) fitCameraToFloor();
   renderScene();
@@ -496,17 +531,25 @@ const fitCameraToFloor = (reset = false) => {
   const height = Math.max(els.mapViewport.clientHeight, 1);
   const aspect = width / height;
   const isPortrait = width < 700;
-  camera.up.set(...(isPortrait ? [1, 0, 0] : [0, 0, -1]));
+  camera.up.set(...(isSection() ? [0, 1, 0] : isPortrait ? [1, 0, 0] : [0, 0, -1]));
   controls.target.set(bounds.centerX, 0, bounds.centerZ);
-  if (state.mode === '2d') camera.position.set(bounds.centerX, 80, bounds.centerZ + 0.001);
+  if (isSection()) {
+    const topClearance = isPortrait ? 5 : 0;
+    controls.target.set(21, sectionSpacing() * 2 + 1 + topClearance, 10);
+    camera.position.set(29, sectionSpacing() * 2 + 87 + topClearance, 120);
+  }
+  else if (state.mode === '2d') camera.position.set(bounds.centerX, 80, bounds.centerZ + 0.001);
   else if (isPortrait) camera.position.set(bounds.centerX + 8, 80, bounds.centerZ + 32);
   else camera.position.set(bounds.centerX + 12, 80, bounds.centerZ + 38);
   camera.lookAt(controls.target);
   camera.updateMatrixWorld(true);
-  const points = floorOutlines(floor).flat().map(([x, z]) => new THREE.Vector3(x, 0, z).applyMatrix4(camera.matrixWorldInverse));
+  const worldPoints = isSection()
+    ? sectionFloors().flatMap((item, index) => [...floorOutlines(item).flat(), [-23, 12], [64, 12]].flatMap(([x, z]) => [new THREE.Vector3(x, index * sectionSpacing(), z), new THREE.Vector3(x, index * sectionSpacing() + 3, z)]))
+    : floorOutlines(floor).flat().map(([x, z]) => new THREE.Vector3(x, 0, z));
+  const points = worldPoints.map((point) => point.applyMatrix4(camera.matrixWorldInverse));
   const projectedWidth = Math.max(...points.map((p) => p.x)) - Math.min(...points.map((p) => p.x));
   const projectedHeight = Math.max(...points.map((p) => p.y)) - Math.min(...points.map((p) => p.y));
-  const frustum = Math.max(projectedHeight / 2, projectedWidth / aspect / 2) * 1.22;
+  const frustum = Math.max(projectedHeight / 2, projectedWidth / aspect / 2) * (isSection() && isPortrait ? 1.4 : 1.22);
 
   camera.left = -frustum * aspect;
   camera.right = frustum * aspect;
@@ -535,7 +578,7 @@ const fitCameraToFloor = (reset = false) => {
 
 const focusSelectedRoom = () => {
   const room = activeRoom();
-  if (!webglAvailable || !controls || !room) return;
+  if (!webglAvailable || !controls || !room || isSection()) return;
   const stair = connectors.find((item) => item.id === accessForRoom(room).stairId);
   const points = stair ? [...room.polygon, ...stair.polygon] : room.polygon;
   const bounds = polygonBounds(points);
@@ -619,10 +662,11 @@ const renderFloorControls = () => {
 const renderFloorHeader = () => {
   const floor = currentFloor();
   const building = buildingById(floor.buildingId);
-  if (els.floorTitle.textContent !== floor.title) els.floorTitle.textContent = floor.title;
+  const title = isSection() ? 'Przekrój budynku głównego' : floor.title;
+  if (els.floorTitle.textContent !== title) els.floorTitle.textContent = title;
   if (els.floorContext.textContent !== building.name) els.floorContext.textContent = building.name;
   if (els.floorNote.textContent !== floor.note) els.floorNote.textContent = floor.note;
-  els.mapDescription.textContent = `${building.name}, ${floor.title}. ${floor.note}`;
+  els.mapDescription.textContent = isSection() ? 'Schematyczny przekrój: piwnica, parter oraz trzy piętra. Odstępy między kondygnacjami powiększone dla czytelności. Wybierz kondygnację, aby otworzyć jej rzut.' : `${building.name}, ${floor.title}. ${floor.note}`;
 };
 
 const renderSelected = () => {
@@ -821,7 +865,10 @@ const render = ({ rebuild = true } = {}) => {
   renderFloorHeader();
   renderSelected();
   renderResults();
-  document.querySelectorAll('[data-map-mode]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.mapMode === state.mode)));
+  document.querySelectorAll('[data-map-mode]').forEach((button) => {
+    button.setAttribute('aria-pressed', String(button.dataset.mapMode === state.mode));
+    if (button.dataset.mapMode === '2.5d') button.hidden = state.buildingId !== 'main';
+  });
   els.mapViewport.dataset.mode = state.mode;
   if (rebuild) rebuildScene();
 };
@@ -859,6 +906,7 @@ const setBuilding = (buildingId, sync = true) => {
   const firstFloor = available.find((floor) => floor.level === 0) || available[0];
   if (!firstFloor) return;
   state.buildingId = buildingId;
+  if (buildingId !== 'main') state.mode = '2d';
   state.floorId = firstFloor.id;
   state.activeRoomId = null;
   if (sync) syncUrl();
@@ -869,6 +917,7 @@ const setFloor = (floorId, sync = true) => {
   const floor = floorById(floorId);
   if (!floor) return;
   state.buildingId = floor.buildingId;
+  if (floor.buildingId !== 'main') state.mode = '2d';
   state.floorId = floor.id;
   state.activeRoomId = null;
   if (sync) syncUrl();
@@ -880,6 +929,7 @@ const selectRoom = (roomId, sync = true) => {
   if (!selected) return;
   const floor = floorById(selected.floorId);
   state.activeRoomId = selected.id;
+  if (floor.buildingId !== 'main') state.mode = '2d';
   state.floorId = floor.id;
   state.buildingId = floor.buildingId;
   state.view = 'indoor';

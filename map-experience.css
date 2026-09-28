@@ -83,6 +83,12 @@ body { overflow: auto; }
 .map-room-label.is-selected { border-color: var(--accent); background: var(--accent); color: var(--on-accent); }
 .map-landmark-label { min-width: 32px; min-height: 26px; font-size: .65rem; }
 .map-landmark-label.is-stairs { color: var(--ink); border-color: var(--muted); }
+.section-floor-label { position: absolute; min-height: 44px; padding: 4px 7px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface-strong); color: var(--ink); font: inherit; font-size: 12px; font-weight: 700; pointer-events: auto; cursor: pointer; }
+.section-floor-label.is-active { border-color: var(--accent); color: var(--accent-strong); }
+@media (max-width: 699px) {
+  #mapViewport[data-mode="2.5d"] { min-height: 480px; }
+  #mapViewport[data-mode="2.5d"] .map-controls { top: auto; bottom: 10px; grid-auto-flow: column; }
+}
 .leaflet-tooltip.campus-label.campus-street-label { color: var(--ink); background: var(--surface-strong); border: 1px solid var(--muted); padding: 5px 8px; font-size: 12px; font-weight: 700; white-space: nowrap; max-width: none; }
 .map-landmark-label.is-nearest { color: var(--accent-strong); border: 2px solid var(--accent); }
 .map-landmark-label.is-entrance { max-width: 130px; white-space: normal; font-size: .65rem; }

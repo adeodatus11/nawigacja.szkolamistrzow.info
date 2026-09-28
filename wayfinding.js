@@ -54,7 +54,7 @@ export const readNavigation = (url, mobile = false) => {
     buildingId: floor.buildingId,
     floorId: floor.id,
     activeRoomId: room?.id || null,
-    mode: ['2d', '2.5d'].includes(params.get('mode')) ? params.get('mode') : mobile ? '2d' : '2.5d',
+    mode: floor.buildingId === 'main' && params.get('mode') === '2.5d' ? '2.5d' : '2d',
     campusMode: params.get('context') === 'surroundings' ? 'surroundings' : 'scheme',
     campusLocationId: ['main', 'gym', 'gastronomy', 'hairdressing'].includes(params.get('location'))
       ? params.get('location') : room ? accessForRoom(room).campusLocationId : floor.buildingId === 'workshops' ? 'gastronomy' : floor.buildingId,

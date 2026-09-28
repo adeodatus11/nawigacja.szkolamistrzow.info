@@ -79,7 +79,8 @@ export class ProjectedLabels {
     }
     for (const label of candidates) {
       const { x, y, w, h, element, priority } = label;
-      const offsets = [[-w - 6, 0], [w + 6, 0], [-w * 2 - 12, 0], [w * 2 + 12, 0], [0, -h - 6], [0, h + 6]];
+      const sectionRoom = this.container.dataset.mode === '2.5d' && element.dataset.labelRoom;
+      const offsets = sectionRoom ? [[-w / 2, 0], [w / 2, 0]] : [[-w - 6, 0], [w + 6, 0], [-w * 2 - 12, 0], [w * 2 + 12, 0], [0, -h - 6], [0, h + 6]];
       let box = offsets.map(([dx, dy]) => ({ x: x - w / 2 + dx, y: y - h / 2 + dy, w, h })).find(fits);
       if (!box && (priority >= 10 || element === focused)) {
         for (let top = 62; top < viewport.height - h; top += h + 6) {
