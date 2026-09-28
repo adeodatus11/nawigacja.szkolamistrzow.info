@@ -68,7 +68,7 @@ export const floors = [
       [-10, 8],
       [-11, 8],
     ],
-    corridor: [[-2, 7], [60, 7], [60, 11], [0, 11], [0, 22], [-6, 22], [-6, 8], [-2, 8]],
+    corridor: [[-3, 7], [60, 7], [60, 11], [-3, 11], [-3, 18], [-5, 18], [-5, 8], [-3, 8]],
   },
   {
     id: "pietro-1",
@@ -146,22 +146,22 @@ export const spaces = [
   room("szatnia-nauczycieli", "SN, szatnia nauczycieli", "piwnica", rect(42, 11, 7, 7), "Dolny prawy korytarz, przed prawą klatką schodową.", "support", ["szatnia nauczycieli"], "SN"),
   room("sklepik", "Sklepik szkolny", "piwnica", rect(49, 11, 6, 7), "Obok szatni nauczycieli, w prawej części piwnicy.", "service", ["sklep", "bufet"], "SKL"),
 
-  room("szatnia", "PF, szatnia uczniowska", "parter", rect(0, 0, 3, 7), "Niewielki lewy narożnik parteru, obok sali 05.", "support", ["szatnia", "szatnia uczniowska"], "PF"),
-  room("5", "Sala 05", "parter", rect(3, 0, 12, 7), "Naprzeciw lewej klatki schodowej, obok szatni uczniowskiej.", "classroom", ["05", "sala 5", "sala 05"], "05"),
-  room("7", "Sala 7", "parter", rect(15, 0, 6, 7), "Naprzeciw środkowej klatki schodowej, obok WC."),
-  room("wc-0", "WC męskie", "parter", rect(21, 0, 4, 7), "Naprzeciw środkowej klatki schodowej, między salami 7 i 6.", "support", ["toaleta", "męskie"]),
-  room("6", "Sala 6, pracownia fryzjerska", "parter", rect(25, 0, 14, 7), "Górny korytarz, między WC a salą 8.", "workshop", ["fryzjer", "pracownia fryzjerska"]),
-  room("8", "Sala 8, sala gimnastyczna", "parter", rect(39, 0, 9, 7), "Górny prawy korytarz, przed prawą klatką schodową.", "gym", ["hala", "sala gimnastyczna"]),
+  room("szatnia", "PF, szatnia uczniowska", "parter", rect(-11, 0, 11, 7), "Górna część lewej dobudówki, nad salą 05 i salą kinową.", "support", ["szatnia", "szatnia uczniowska"], "PF"),
+  room("5", "Sala 5", "parter", rect(0, 0, 10, 7), "Naprzeciw lewej klatki schodowej, obok pracowni fryzjerskiej 6–7.", "classroom", ["sala 5"]),
+  { ...room("05", "Sala 05", "parter", rect(-10, 8, 5, 10), "Pół piętra poniżej parteru. Lewa część dobudówki, obok sali kinowej; przejście do kina pozostaje po prawej stronie.", "classroom", ["sala 05", "półpiętro"], "05"), levelLabel: "Pół piętra poniżej parteru" },
+  room("6", "Sale 6–7, pracownia fryzjerska", "parter", rect(10, 0, 18, 7), "Połączone sale 6 i 7, między salą lekcyjną 5 a WC.", "workshop", ["7", "sala 7", "sala 6", "fryzjer", "pracownia fryzjerska"], "6–7"),
+  room("wc-0", "WC męskie", "parter", rect(28, 0, 5, 7), "W tym samym pionie co WC na I i II piętrze, obok sali gimnastycznej 8.", "support", ["toaleta", "męskie"]),
+  room("8", "Sala 8, sala gimnastyczna", "parter", rect(33, 0, 15, 7), "Od WC aż do prawej klatki schodowej.", "gym", ["hala", "sala gimnastyczna"]),
   room("portiernia", "PI, portiernia", "parter", rect(52, -2, 8, 6.5), "Prawa część parteru przy wejściu i prawej klatce schodowej.", "service", ["monitoring", "portier"], "PI"),
-  room("sala-kinowa", "SK, sala kinowa", "parter", rect(-6, 11, 6, 11), "Lewa część parteru, przy przejściu do pracowni fryzjerskiej.", "service", ["kino", "aula", "sala kinowa"], "SK"),
+  room("sala-kinowa", "SK, sala kinowa", "parter", rect(-10, 18, 10, 8), "Dolna część lewej dobudówki. Dojście przejściem po prawej stronie sali 05.", "service", ["kino", "aula", "sala kinowa"], "SK"),
   room("4", "Sala 4", "parter", rect(0, 11, 8, 7), "Dolny lewy korytarz, przy lewej klatce schodowej."),
   room("3", "Sala 3", "parter", rect(8, 11, 10, 7), "Dolny korytarz, między salą 4 a środkową klatką schodową."),
   room("2", "Sala 2", "parter", rect(27, 11, 11, 7), "Dolny środkowy korytarz, obok środkowej klatki schodowej."),
   room("1", "Sala 1, sekretariat uczniowski", "parter", rect(44, 11, 5, 7), "Prawa część parteru, przy prawej klatce schodowej.", "administration", ["sekretariat", "sekretariat uczniowski"]),
 
   room("19", "Sala 19", "pietro-1", rect(0, 0, 10, 7), "Górny lewy korytarz, nad salą 18."),
-  room("20", "Sala 20", "pietro-1", rect(10, 0, 10, 7), "Górny lewy korytarz, między salą 19 a salą 21."),
-  room("21", "Sala 21, biblioteka", "pietro-1", rect(20, 0, 8, 7), "Górny środkowy korytarz, obok sali 20.", "service", ["biblioteka", "czytelnia"]),
+  room("20", "Sala 20, biblioteka", "pietro-1", rect(10, 0, 10, 7), "Górny lewy korytarz, obok czytelni 21.", "service", ["biblioteka"]),
+  room("21", "Sala 21, czytelnia", "pietro-1", rect(20, 0, 8, 7), "Górny środkowy korytarz, obok biblioteki 20.", "service", ["czytelnia"]),
   room("wc-1", "WC damskie", "pietro-1", rect(28, 0, 5, 7), "Górny środkowy korytarz.", "support", ["toaleta", "damskie"]),
   room("22", "Sala 22", "pietro-1", rect(33, 0, 15, 7), "Górny prawy korytarz, przed prawą klatką schodową."),
   room("23", "Sala 23", "pietro-1", rect(52, -2, 8, 9), "Prawy górny narożnik przy prawej klatce schodowej."),
@@ -194,8 +194,8 @@ export const spaces = [
   room("43", "Sala 43", "pietro-3", rect(36, 0, 12, 7), "Górny prawy korytarz, przed prawą klatką schodową."),
   room("44", "Sala 44", "pietro-3", rect(52, -2, 8, 9), "Prawy górny narożnik przy prawej klatce schodowej."),
   room("39", "Sala 39, sala gimnastyczna", "pietro-3", rect(0, 11, 18, 7), "Dolny lewy korytarz, przy lewej klatce schodowej.", "gym", ["hala", "sala gimnastyczna"]),
-  room("38", "Sala 38, pracownia informatyczna", "pietro-3", rect(25, 11, 8, 7), "Dolny środkowy korytarz, obok środkowej klatki schodowej.", "technical", ["informatyczna", "komputerowa"]),
-  room("37", "Sala 37, pracownia informatyczna", "pietro-3", rect(33, 11, 12, 7), "Dolny prawy korytarz. Najbliżej ze środkowej lub prawej klatki schodowej.", "technical", ["informatyczna", "komputerowa"]),
+  room("38", "Sala 38, pracownia informatyczna", "pietro-3", rect(25, 11, 8, 7), "Dolny środkowy korytarz, obok środkowej klatki schodowej.", "workshop", ["informatyczna", "komputerowa"]),
+  room("37", "Sala 37, pracownia informatyczna", "pietro-3", rect(33, 11, 12, 7), "Dolny prawy korytarz. Najbliżej ze środkowej lub prawej klatki schodowej.", "workshop", ["informatyczna", "komputerowa"]),
   room("36", "Sala 36, wicedyrektor Maciej Najwer", "pietro-3", rect(45, 11, 7, 7), "Dolny prawy korytarz, między salą 37 a sekretariatem dyrektora COSINUS.", "administration", ["wicedyrektor", "Maciej Najwer"]),
   room("35", "Sala 35, sekretariat dyrektora COSINUS", "pietro-3", rect(52, 11, 8, 7), "Skrajny prawy dolny narożnik.", "administration", ["sekretariat dyrektora", "cosinus"]),
 
@@ -223,7 +223,6 @@ export const structuralSpaces = [
   { id: "piwnica-naroznik", floorId: "piwnica", polygon: rect(51, -2, 9, 8.5) },
   { id: "piwnica-magazyn", floorId: "piwnica", polygon: rect(10, 7, 10, 4) },
   { id: "piwnica-magazynek", floorId: "piwnica", polygon: rect(34, 7, 6, 4) },
-  { id: "parter-lewe-skrzydlo", floorId: "parter", polygon: rect(-11, 0, 11, 8) },
   { id: "parter-dawna-1a", floorId: "parter", polygon: rect(49, 11, 5, 7) },
   { id: "parter-prawy-naroznik", floorId: "parter", polygon: rect(54, 11, 6, 7) },
 ];
@@ -234,16 +233,19 @@ const mainStairs = (floorId) => [
     floorId,
     type: "stairs",
     label: "Schody",
-    polygon: rect(2.4, 7.15, 5.4, 2.35),
-    labelPoint: [5.1, 8.3],
+    polygon: rect(1, 7, 6, 4),
+    layout: "straight",
+    labelPoint: [4, 9],
   },
   {
     id: `${floorId}-stairs-center`,
     floorId,
     type: "stairs",
     label: "Schody",
-    polygon: rect(20.3, 11.15, 4.4, 5.7),
-    labelPoint: [22.5, 14],
+    polygon: floorId === "parter" ? rect(18, 11, 9, 7)
+      : floorId === "pietro-3" ? rect(18, 11, 7, 7)
+      : floorId === "piwnica" ? rect(20, 11, 6, 7) : rect(20, 11, 8, 7),
+    labelPoint: [floorId === "parter" ? 22.5 : floorId === "pietro-3" ? 21.5 : floorId === "piwnica" ? 23 : 24, 14.5],
   },
   {
     id: `${floorId}-stairs-right`,
@@ -266,7 +268,8 @@ export const connectors = [
 ];
 
 export const landmarks = [
-  { id: "parter-courtyard", floorId: "parter", type: "entrance", label: "Wejście na boisko / dziedziniec", point: [31, 18] },
+  { id: "parter-courtyard", floorId: "parter", type: "entrance", label: "Wejście na boisko / dziedziniec", point: [22.5, 18] },
+  { id: "parter-emergency", floorId: "parter", type: "entrance", label: "Wyjście ewakuacyjne między salami 1 i 2", point: [41, 18] },
   { id: "parter-main", floorId: "parter", type: "entrance", label: "Wejście główne", point: [60, 9] },
   { id: "piwnica-east", floorId: "piwnica", type: "entrance", label: "Wejście", point: [60, 9] },
   { id: "workshops-exit", floorId: "pracownie", type: "entrance", label: "Wyjście", point: [0, 2] },

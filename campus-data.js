@@ -2,7 +2,23 @@
 const polygon = (coordinates) => ({ type: "Polygon", coordinates: [coordinates] });
 
 export const campusCenter = [51.09402, 17.03836];
-export const campusBounds = [[51.09356, 17.03768], [51.09443, 17.03908]];
+export const campusBounds = [[51.09356, 17.03768], [51.09478, 17.03916]];
+
+// OpenStreetMap way 22729736, checked 2026-09-28. Stored locally for the offline scheme.
+export const campusStreet = {
+  name: "ul. Jana Władysława Dawida",
+  labelPoint: [51.09460, 17.03857],
+  points: [
+    [51.0948451, 17.0375812], [51.0948002, 17.037798],
+    [51.0947849, 17.0378684], [51.094717, 17.0381587],
+    [51.0946736, 17.0383213], [51.0946594, 17.0383668],
+    [51.0946068, 17.0385463], [51.0945938, 17.0385902],
+    [51.0945806, 17.0386258], [51.0945633, 17.0386774],
+    [51.0944318, 17.0390125], [51.0944056, 17.0390852],
+    [51.0943727, 17.0391648], [51.0943147, 17.0392854],
+    [51.0942914, 17.0393371],
+  ],
+};
 
 export const campusLocations = [
   {

@@ -26,8 +26,10 @@
     <link rel="stylesheet" href="assets/leaflet.css" />
     <link rel="preload" href="assets/fonts/jost-variable.ttf" as="font" type="font/ttf" crossorigin />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="map-experience.css" />
   </head>
   <body>
+    <a class="skip-link" href="#roomSearch">Przejdź do wyszukiwania sal</a>
     <header class="topbar">
       <div class="brand">
         <picture>
@@ -54,7 +56,6 @@
           Mapa terenu
         </button>
       </nav>
-      <p class="topbar-note">Znajdź salę, piętro i najbliższą klatkę schodową.</p>
     </header>
 
     <main class="app-shell" id="appShell">
@@ -69,7 +70,7 @@
             autocomplete="off"
             enterkeyhint="search"
           />
-          <button id="searchClear" class="clear-button" type="button" aria-label="Wyczyść wyszukiwanie" hidden>Wyczyść</button>
+          <button id="searchClear" class="clear-button" type="button" aria-label="Wyczyść wyszukiwanie" title="Wyczyść wyszukiwanie" hidden><i data-lucide="x" aria-hidden="true"></i></button>
         </div>
       </section>
 
@@ -83,18 +84,30 @@
             </div>
           </div>
           <p class="selected-meta" id="selectedMeta">Budynek główny, parter</p>
-          <p id="selectedHint">Kliknij salę na planie albo wybierz ją z listy wyników.</p>
-          <p class="stairs-hint" id="selectedStairs">Schody są oznaczone bezpośrednio na mapie.</p>
+          <p id="selectedCategory" class="selected-category"></p>
+          <button type="button" id="detailsToggle" class="details-toggle" aria-expanded="false" aria-controls="roomDirections"><span>Szczegóły dojścia</span><i data-lucide="chevron-down" aria-hidden="true"></i></button>
+          <div id="roomDirections" class="room-directions">
+            <p id="selectedHint">Kliknij salę na planie albo wybierz ją z listy wyników.</p>
+            <p class="stairs-hint" id="selectedStairs">Schody są oznaczone bezpośrednio na mapie.</p>
+          </div>
+          <div class="selected-actions">
           <button class="share-button" id="shareRoom" type="button" hidden>
             <i data-lucide="share-2" aria-hidden="true"></i>
             <span id="shareText">Udostępnij salę</span>
           </button>
+          <button class="secondary-button" id="roomOnCampus" type="button" hidden><i data-lucide="map" aria-hidden="true"></i>Pokaż budynek</button>
+          </div>
         </section>
 
         <section class="results-section" aria-labelledby="resultsTitle">
+          <nav class="quick-places" aria-label="Popularne miejsca">
+            <button type="button" data-quick-room="1">Sekretariat</button>
+            <button type="button" data-quick-room="20">Biblioteka</button>
+            <button type="button" data-quick-room="gim-0">Sala gimnastyczna</button>
+          </nav>
           <div class="results-heading">
             <h2 id="resultsTitle">Miejsca</h2>
-            <span id="resultCount" aria-label="Liczba wyników">0</span>
+            <span id="resultCount" aria-label="Liczba wyników" role="status">0</span>
           </div>
           <div class="room-results" id="roomResults"></div>
         </section>
@@ -132,15 +145,22 @@
           </div>
           <div class="floor-summary">
             <p id="floorNote">Wejścia, sekretariat, sala kinowa, szatnia oraz sale 1-8.</p>
+            <details class="map-legend">
+            <summary>Legenda</summary>
             <ul class="room-legend" aria-label="Kolory pomieszczeń">
-              <li><span class="legend-swatch is-classroom" aria-hidden="true"></span>Sale lekcyjne / pracownie</li>
-              <li><span class="legend-swatch is-administration" aria-hidden="true"></span>Administracja</li>
-              <li><span class="legend-swatch is-gym" aria-hidden="true"></span>Sale gimnastyczne</li>
+              <li><span class="legend-swatch is-classroom" aria-hidden="true"></span><i data-lucide="graduation-cap" aria-hidden="true"></i>Sale lekcyjne / pracownie</li>
+              <li><span class="legend-swatch is-administration" aria-hidden="true"></span><i data-lucide="briefcase-business" aria-hidden="true"></i>Administracja</li>
+              <li><span class="legend-swatch is-gym" aria-hidden="true"></span><i data-lucide="dumbbell" aria-hidden="true"></i>Sale gimnastyczne</li>
             </ul>
+            </details>
           </div>
         </div>
 
-        <div class="map-viewport" id="mapViewport">
+        <div class="map-viewport" id="mapViewport" tabindex="0" role="group" aria-label="Plan kondygnacji">
+          <div class="map-mode-switch" aria-label="Perspektywa mapy">
+            <button type="button" data-map-mode="2d" aria-pressed="false">Rzut</button>
+            <button type="button" data-map-mode="2.5d" aria-pressed="true">2.5D</button>
+          </div>
           <canvas
             id="schoolScene"
             role="img"
@@ -161,17 +181,21 @@
             <button id="resetView" type="button" aria-label="Pokaż całe piętro" data-tooltip="Pokaż całe piętro">
               <i data-lucide="locate-fixed"></i>
             </button>
+            <button id="panMap" type="button" aria-label="Przesuwaj mapę" aria-pressed="false" data-tooltip="Przesuwaj mapę"><i data-lucide="hand" aria-hidden="true"></i></button>
           </div>
 
-          <p class="map-status" id="mapStatus" aria-live="polite">Wybierz salę, aby zobaczyć jej położenie.</p>
+          <p class="map-status sr-only" id="mapStatus" aria-live="polite">Wybierz salę, aby zobaczyć jej położenie.</p>
         </div>
       </section>
 
       <section class="campus-panel" id="campusPanel" aria-labelledby="campusTitle" hidden>
         <header class="campus-header">
           <div>
-            <p class="section-label">Teren ZSZ nr 5</p>
-            <h2 id="campusTitle">Mapa budynków i wejść</h2>
+            <h2 id="campusTitle">Teren szkoły</h2>
+          </div>
+          <div class="campus-mode-switch" aria-label="Rodzaj mapy terenu">
+            <button type="button" data-campus-mode="scheme" aria-pressed="true">Schemat</button>
+            <button type="button" data-campus-mode="surroundings" aria-pressed="false">Okolica</button>
           </div>
           <a href="https://www.openstreetmap.org/#map=19/51.094021/17.038148" target="_blank" rel="noreferrer">
             OpenStreetMap
@@ -194,10 +218,13 @@
               <h2 id="campusDetailTitle">Budynek główny</h2>
               <p id="campusDetailText">Parter, trzy piętra i piwnica.</p>
             </div>
+            <div class="campus-actions">
+            <button id="returnToRoom" type="button" hidden><i data-lucide="arrow-left" aria-hidden="true"></i><span>Wróć do sali</span></button>
             <button id="campusOpenIndoor" type="button">
               <i data-lucide="door-open" aria-hidden="true"></i>
               Pokaż plan wnętrza
             </button>
+            </div>
           </section>
         </div>
       </section>

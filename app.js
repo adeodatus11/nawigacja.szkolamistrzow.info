@@ -1,9 +1,12 @@
 import * as THREE from "./node_modules/three/build/three.module.js";
-import * as L from "leaflet";
 import { MapControls } from "./node_modules/three/examples/jsm/controls/MapControls.js";
-import { CSS2DObject, CSS2DRenderer } from "./node_modules/three/examples/jsm/renderers/CSS2DRenderer.js";
+import { ProjectedLabels } from "./projected-labels.js";
+import { stairLayout } from "./stair-layout.js";
+import { createCampusMap } from "./campus-map.js";
+import { accessForRoom, findRoom, readNavigation, roomTypeFor, roomTypes } from "./wayfinding.js";
 import {
   createIcons,
+  createElement,
   Search,
   Minus,
   Plus,
@@ -16,6 +19,13 @@ import {
   Map as MapIcon,
   ExternalLink,
   DoorOpen,
+  X,
+  GraduationCap,
+  BriefcaseBusiness,
+  Dumbbell,
+  ChevronDown,
+  ArrowLeft,
+  Hand,
 } from "lucide";
 import {
   buildings,
@@ -30,25 +40,13 @@ import {
   landmarksOnFloor,
   shortRoomLabel,
 } from "./map-data.js";
-import {
-  campusBounds,
-  campusLocations,
-  campusPitch,
-  campusEntrances,
-} from "./campus-data.js";
+import { campusLocations } from "./campus-data.js";
 
 const params = new URL(window.location.href).searchParams;
-const requestedRoom = spaces.find((space) => space.id === params.get("room"));
-const requestedFloor = floorById(params.get("floor"));
-const initialFloor = requestedRoom ? floorById(requestedRoom.floorId) : requestedFloor || floorById("parter");
-
 const state = {
-  view: params.get("view") === "campus" ? "campus" : "indoor",
-  buildingId: initialFloor.buildingId,
-  floorId: initialFloor.id,
-  activeRoomId: requestedRoom?.id || null,
+  ...readNavigation(new URL(window.location.href), window.innerWidth <= 900),
   query: "",
-  campusLocationId: "main",
+  detailsExpanded: false,
 };
 
 const els = {
@@ -87,6 +85,10 @@ const els = {
   campusDetailTitle: document.querySelector("#campusDetailTitle"),
   campusDetailText: document.querySelector("#campusDetailText"),
   campusOpenIndoor: document.querySelector("#campusOpenIndoor"),
+  roomOnCampus: document.querySelector("#roomOnCampus"),
+  returnToRoom: document.querySelector("#returnToRoom"),
+  detailsToggle: document.querySelector("#detailsToggle"),
+  selectedCategory: document.querySelector("#selectedCategory"),
 };
 
 createIcons({
@@ -103,6 +105,13 @@ createIcons({
     Map: MapIcon,
     ExternalLink,
     DoorOpen,
+    X,
+    GraduationCap,
+    BriefcaseBusiness,
+    Dumbbell,
+    ChevronDown,
+    ArrowLeft,
+    Hand,
   },
   attrs: { "aria-hidden": "true", width: 18, height: 18 },
 });
@@ -121,7 +130,7 @@ const searchResults = () => {
   const query = normalize(state.query);
   if (!query) return spacesOnFloor(state.floorId);
 
-  return spaces.filter((space) => {
+  const results = spaces.filter((space) => {
     const floor = floorById(space.floorId);
     const building = buildingById(floor.buildingId);
     const haystack = normalize([
@@ -134,6 +143,8 @@ const searchResults = () => {
     ].join(" "));
     return haystack.includes(query);
   });
+  const exact = findRoom(query);
+  return exact ? [exact, ...results.filter((space) => space !== exact)] : results;
 };
 
 const polygonBounds = (polygon) => {
@@ -181,45 +192,20 @@ const makeExtrudedGeometry = (polygon, height) => {
 
 const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
 
-const scenePalette = () => prefersDark.matches
-  ? {
-      background: 0x191918,
-      ground: 0x222220,
-      slab: 0x353530,
-      corridor: 0x42423a,
-      room: 0xeeeae2,
-      roomSide: 0xbcb7ac,
-      classroom: 0x4f8199,
-      classroomSide: 0x31586b,
-      administration: 0x9b7a32,
-      administrationSide: 0x604a1d,
-      gym: 0x5d875f,
-      gymSide: 0x38563b,
-      edge: 0x858175,
-      accent: 0xffab66,
-      accentSide: 0xad4700,
-      stairs: 0x625e54,
-      step: 0xf3efe6,
-    }
-  : {
-      background: 0xf3f2ef,
-      ground: 0xeeece7,
-      slab: 0xdcd8ce,
-      corridor: 0xfbfaf6,
-      room: 0xffffff,
-      roomSide: 0xd5d1c9,
-      classroom: 0xcfe6f1,
-      classroomSide: 0x9abecd,
-      administration: 0xf2dfaa,
-      administrationSide: 0xc7ad62,
-      gym: 0xcfe4cb,
-      gymSide: 0x94b68e,
-      edge: 0x9b9588,
-      accent: 0xd35f00,
-      accentSide: 0x913b00,
-      stairs: 0x4b4942,
-      step: 0xf8f6f0,
-    };
+const scenePalette = () => {
+  const css = getComputedStyle(document.documentElement);
+  const color = (token) => css.getPropertyValue(token).trim();
+  return {
+    background: color('--map-background'), ground: color('--surface-muted'),
+    slab: color('--line'), corridor: color('--surface-strong'),
+    room: color('--surface'), roomSide: color('--line'),
+    classroom: color('--room-classroom'), classroomSide: color('--room-classroom-line'),
+    administration: color('--room-administration'), administrationSide: color('--room-administration-line'),
+    gym: color('--room-gym'), gymSide: color('--room-gym-line'),
+    edge: color('--muted'), accent: color('--accent'), accentSide: color('--accent-strong'),
+    stairs: color('--muted'), step: color('--surface-strong'),
+  };
+};
 
 const scene = new THREE.Scene();
 const camera = new THREE.OrthographicCamera(-30, 30, 20, -20, 0.1, 500);
@@ -230,6 +216,14 @@ let labelRenderer = null;
 let controls = null;
 let webglAvailable = params.get("fallback") !== "1";
 let homeView = null;
+let renderedViewKey = null;
+let cameraFrame = 0;
+let fallbackHome = '';
+const fallbackViews = new Map();
+let pointerStart = null;
+let mapDragged = false;
+const savedViews = new Map();
+const viewKey = () => `${state.floorId}:${state.mode}:${els.mapViewport.clientWidth < 700 ? 'portrait' : 'wide'}`;
 
 const floorGroup = new THREE.Group();
 scene.add(floorGroup);
@@ -246,63 +240,23 @@ roomHoverTooltip.hidden = true;
 roomHoverTooltip.setAttribute("aria-hidden", "true");
 els.mapViewport.appendChild(roomHoverTooltip);
 
-const ambient = new THREE.HemisphereLight(0xffffff, 0xa7b8b0, 2.2);
-scene.add(ambient);
-
-const sun = new THREE.DirectionalLight(0xffffff, 2.1);
-sun.position.set(25, 40, 30);
-sun.castShadow = true;
-sun.shadow.mapSize.set(1024, 1024);
-scene.add(sun);
-
-const labelsOverlap = (first, second, padding = 3) => !(
-  first.right + padding < second.left
-  || first.left - padding > second.right
-  || first.bottom + padding < second.top
-  || first.top - padding > second.bottom
-);
-
-const resolveLabelCollisions = () => {
-  if (!labelRenderer) return;
-  const labels = [...labelRenderer.domElement.querySelectorAll(".map-room-label, .map-landmark-label")];
-  labels.forEach((label) => { label.style.visibility = ""; });
-
-  const protectedLabels = labels.filter((label) => (
-    label.classList.contains("map-landmark-label") || label.classList.contains("is-selected")
-  ));
-  const occupied = protectedLabels.map((label) => label.getBoundingClientRect());
-
-  labels
-    .filter((label) => label.classList.contains("map-room-label") && !label.classList.contains("is-selected"))
-    .forEach((label) => {
-      const bounds = label.getBoundingClientRect();
-      if (occupied.some((other) => labelsOverlap(bounds, other))) {
-        label.style.visibility = "hidden";
-        return;
-      }
-      occupied.push(bounds);
-    });
-};
-
 const renderScene = () => {
   if (!webglAvailable || !renderer || !labelRenderer) return;
   renderer.render(scene, camera);
   labelRenderer.render(scene, camera);
-  resolveLabelCollisions();
+  if (renderedViewKey && controls) savedViews.set(renderedViewKey, {
+    position: camera.position.clone(), target: controls.target.clone(), zoom: camera.zoom,
+  });
 };
 
 const initializeScene = () => {
   if (!webglAvailable) return;
   try {
     renderer = new THREE.WebGLRenderer({ canvas: els.canvas, antialias: true, alpha: false });
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFShadowMap;
+    renderer.shadowMap.enabled = false;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-    labelRenderer = new CSS2DRenderer();
-    labelRenderer.domElement.className = "map-label-layer";
-    labelRenderer.domElement.setAttribute("aria-hidden", "true");
-    els.mapViewport.appendChild(labelRenderer.domElement);
+    labelRenderer = new ProjectedLabels(els.mapViewport);
 
     controls = new MapControls(camera, labelRenderer.domElement);
     controls.enableRotate = false;
@@ -312,9 +266,11 @@ const initializeScene = () => {
     controls.maxZoom = 2.8;
     controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
     controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
-    controls.touches.ONE = THREE.TOUCH.PAN;
+    controls.touches.ONE = window.innerWidth <= 900 ? null : THREE.TOUCH.PAN;
     controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
     controls.addEventListener("change", renderScene);
+    controls.addEventListener("start", () => cancelAnimationFrame(cameraFrame));
+    labelRenderer.domElement.style.touchAction = window.innerWidth <= 900 ? 'pan-y' : 'none';
   } catch (error) {
     webglAvailable = false;
   }
@@ -329,6 +285,7 @@ const disposeObject = (object) => {
 };
 
 const clearFloorGroup = () => {
+  labelRenderer?.clear();
   roomMeshes.clear();
   roomLabels.clear();
   hoveredRoomId = null;
@@ -340,17 +297,11 @@ const clearFloorGroup = () => {
   }
 };
 
-const materialFor = (topColor, sideColor, roughness = 0.82) => [
-  new THREE.MeshStandardMaterial({ color: sideColor, roughness }),
-  new THREE.MeshStandardMaterial({ color: topColor, roughness }),
+// Flat wayfinding colors do not need expensive lighting or shadow shaders.
+const materialFor = (topColor, sideColor) => [
+  new THREE.MeshBasicMaterial({ color: topColor }),
+  new THREE.MeshBasicMaterial({ color: sideColor }),
 ];
-
-const roomTypeFor = (space) => {
-  if (space.category === "administration") return "administration";
-  if (space.category === "gym") return "gym";
-  if (["classroom", "workshop"].includes(space.category)) return "classroom";
-  return "neutral";
-};
 
 const addPolygonMesh = ({ polygon, height, y = 0, topColor, sideColor, edgeColor, edgeOpacity = 0.5 }) => {
   const geometry = makeExtrudedGeometry(polygon, height);
@@ -372,18 +323,44 @@ const addPolygonMesh = ({ polygon, height, y = 0, topColor, sideColor, edgeColor
 };
 
 const makeTextLabel = (text, className, position) => {
-  const element = document.createElement("span");
+  const element = document.createElement("button");
+  element.type = "button";
   element.className = className;
-  element.textContent = text;
-  const object = new CSS2DObject(element);
-  object.position.set(position[0], position[1], position[2]);
-  floorGroup.add(object);
-  return object;
+  const face = document.createElement('span');
+  face.className = 'label-face';
+  face.textContent = text;
+  element.append(face);
+  element.title = text;
+  if (className.includes('is-entrance')) {
+    face.textContent = '';
+    face.append(createElement(DoorOpen, { width: 17, height: 17, 'aria-hidden': 'true' }));
+    const caption = document.createElement('span');
+    caption.className = 'sr-only';
+    caption.textContent = text;
+    element.append(caption);
+  }
+  if (className.includes('map-landmark-label')) {
+    element.setAttribute('aria-label', text);
+    const showName = () => {
+      roomHoverTooltip.textContent = element.getAttribute('aria-label');
+      roomHoverTooltip.hidden = false;
+      const bounds = element.getBoundingClientRect();
+      const viewport = els.mapViewport.getBoundingClientRect();
+      const scale = viewport.width / els.mapViewport.clientWidth;
+      roomHoverTooltip.style.left = `${Math.max(8, Math.min((bounds.left - viewport.left) / scale, els.mapViewport.clientWidth - roomHoverTooltip.offsetWidth - 8))}px`;
+      roomHoverTooltip.style.top = `${Math.max(8, (bounds.top - viewport.top) / scale - roomHoverTooltip.offsetHeight - 8)}px`;
+    };
+    element.addEventListener('pointerenter', showName);
+    element.addEventListener('focus', showName);
+    element.addEventListener('click', showName);
+    element.addEventListener('blur', () => { roomHoverTooltip.hidden = true; });
+  }
+  return labelRenderer.add(element, position, className.includes('is-selected') ? 10 : className.includes('is-stairs') ? 7 : className.includes('is-entrance') ? 6 : 3);
 };
 
 const addRoom = (space, palette) => {
   const selected = space.id === state.activeRoomId;
-  const height = selected ? 0.92 : 0.42;
+  const height = state.mode === '2d' ? 0.08 : selected ? 0.62 : 0.25;
   const roomType = roomTypeFor(space);
   const topColor = palette[roomType] || palette.room;
   const sideColor = palette[`${roomType}Side`] || palette.roomSide;
@@ -398,6 +375,7 @@ const addRoom = (space, palette) => {
   });
   mesh.userData.roomId = space.id;
   mesh.userData.selected = selected;
+  mesh.userData.baseColors = mesh.material.map((material) => material.color.clone());
   roomMeshes.set(space.id, mesh);
 
   const [labelX, labelZ] = space.labelPoint;
@@ -407,12 +385,28 @@ const addRoom = (space, palette) => {
     [labelX, height + 0.34, labelZ],
   );
   roomLabels.set(space.id, label.element);
+  label.element.dataset.labelRoom = space.id;
+  label.element.setAttribute('aria-label', space.name);
+  label.element.setAttribute('aria-pressed', String(selected));
+  label.element.title = space.name;
+  label.element.addEventListener('click', (event) => {
+    event.stopPropagation();
+    if (mapDragged) return;
+    selectRoom(space.id);
+    if (!event.detail) roomLabels.get(space.id)?.focus({ preventScroll: true });
+  });
+  label.element.addEventListener('pointerenter', (event) => setHoveredRoom(space.id, event));
+  label.element.addEventListener('focus', () => {
+    const rect = label.element.getBoundingClientRect();
+    setHoveredRoom(space.id, { clientX: rect.x, clientY: rect.y });
+  });
+  label.element.addEventListener('blur', () => setHoveredRoom(null));
 };
 
 const addStructuralSpace = (space, palette) => {
   addPolygonMesh({
     polygon: space.polygon,
-    height: 0.42,
+    height: state.mode === '2d' ? 0.08 : 0.25,
     y: 0.03,
     topColor: palette.room,
     sideColor: palette.roomSide,
@@ -422,7 +416,6 @@ const addStructuralSpace = (space, palette) => {
 };
 
 const addStairs = (connector, palette) => {
-  const bounds = polygonBounds(connector.polygon);
   addPolygonMesh({
     polygon: connector.polygon,
     height: 0.1,
@@ -433,49 +426,18 @@ const addStairs = (connector, palette) => {
     edgeOpacity: 0.95,
   });
 
-  const margin = Math.min(bounds.width, bounds.depth) * 0.1;
-  const centerGap = Math.max(0.16, bounds.width * 0.08);
-  const runWidth = (bounds.width - margin * 2 - centerGap) / 2;
-  const stepDepth = (bounds.depth - margin * 2) / 7;
-  const stairMaterial = new THREE.MeshStandardMaterial({ color: palette.step, roughness: 0.72 });
-  const railMaterial = new THREE.MeshStandardMaterial({ color: palette.stairs, roughness: 0.62 });
-
-  for (let run = 0; run < 2; run += 1) {
-    for (let index = 0; index < 7; index += 1) {
-      const riseIndex = run === 0 ? index : 6 - index;
-      const stepHeight = 0.08 + riseIndex * 0.055;
-      const geometry = new THREE.BoxGeometry(runWidth, stepHeight, stepDepth * 0.9);
-      const step = new THREE.Mesh(geometry, stairMaterial);
-      step.position.set(
-        bounds.minX + margin + runWidth / 2 + run * (runWidth + centerGap),
-        0.13 + stepHeight / 2,
-        bounds.minZ + margin + stepDepth * (index + 0.5),
-      );
-      step.castShadow = true;
-      step.receiveShadow = true;
-      floorGroup.add(step);
-    }
+  const stairMaterial = new THREE.MeshBasicMaterial({ color: palette.step });
+  for (const tread of stairLayout(connector)) {
+    const height = state.mode === '2d' ? 0.035 : tread.height;
+    const step = new THREE.Mesh(new THREE.BoxGeometry(tread.width, height, tread.depth), stairMaterial);
+    step.position.set(tread.x + tread.width / 2, 0.13 + height / 2, tread.z + tread.depth / 2);
+    step.add(new THREE.LineSegments(new THREE.EdgesGeometry(step.geometry), new THREE.LineBasicMaterial({ color: palette.edge })));
+    floorGroup.add(step);
   }
 
-  const landing = new THREE.Mesh(
-    new THREE.BoxGeometry(bounds.width - margin * 2, 0.1, Math.max(stepDepth * 0.9, 0.24)),
-    stairMaterial,
-  );
-  landing.position.set(bounds.centerX, 0.56, bounds.maxZ - margin - stepDepth * 0.45);
-  landing.castShadow = true;
-  floorGroup.add(landing);
-
-  [bounds.minX + margin * 0.45, bounds.centerX, bounds.maxX - margin * 0.45].forEach((x) => {
-    const rail = new THREE.Mesh(
-      new THREE.BoxGeometry(Math.max(0.08, bounds.width * 0.025), 0.13, bounds.depth - margin * 1.2),
-      railMaterial,
-    );
-    rail.position.set(x, 0.66, bounds.centerZ);
-    rail.castShadow = true;
-    floorGroup.add(rail);
-  });
-
-  makeTextLabel("SCHODY", "map-landmark-label is-stairs", [connector.labelPoint[0], 1.08, connector.labelPoint[1]]);
+  const stairLabel = makeTextLabel("Schody", "map-landmark-label is-stairs", [connector.labelPoint[0], 0.9, connector.labelPoint[1]]);
+  stairLabel.element.setAttribute('aria-label', `Schody, ${connector.id.includes('left') ? 'lewa klatka' : connector.id.includes('right') ? 'prawa klatka' : 'środkowa klatka'}`);
+  if (activeRoom() && accessForRoom(activeRoom()).stairId === connector.id) stairLabel.element.classList.add('is-nearest');
 };
 
 const addLandmark = (landmark) => {
@@ -483,6 +445,7 @@ const addLandmark = (landmark) => {
 };
 
 const rebuildScene = () => {
+  cancelAnimationFrame(cameraFrame);
   if (!webglAvailable) {
     renderFallbackMap();
     return;
@@ -518,22 +481,32 @@ const rebuildScene = () => {
   connectorsOnFloor(state.floorId).forEach((connector) => addStairs(connector, palette));
   landmarksOnFloor(state.floorId).forEach(addLandmark);
 
-  fitCameraToFloor();
+  if (renderedViewKey !== viewKey()) fitCameraToFloor();
   renderScene();
 };
 
-const fitCameraToFloor = () => {
+const fitCameraToFloor = (reset = false) => {
   if (!webglAvailable || !controls) return;
+  const nextKey = viewKey();
+  const previous = reset ? null : savedViews.get(nextKey);
+  renderedViewKey = null;
   const floor = currentFloor();
   const bounds = floorBounds(floor);
   const width = Math.max(els.mapViewport.clientWidth, 1);
   const height = Math.max(els.mapViewport.clientHeight, 1);
   const aspect = width / height;
   const isPortrait = width < 700;
-  const footprint = isPortrait
-    ? Math.max(bounds.width * 0.58, (bounds.depth / Math.max(aspect, 0.6)) * 0.62)
-    : Math.max(bounds.depth * 1.8, bounds.width / Math.max(aspect, 0.5)) * 0.68;
-  const frustum = Math.max(footprint, isPortrait ? 19 : 24);
+  camera.up.set(...(isPortrait ? [1, 0, 0] : [0, 0, -1]));
+  controls.target.set(bounds.centerX, 0, bounds.centerZ);
+  if (state.mode === '2d') camera.position.set(bounds.centerX, 80, bounds.centerZ + 0.001);
+  else if (isPortrait) camera.position.set(bounds.centerX + 8, 80, bounds.centerZ + 32);
+  else camera.position.set(bounds.centerX + 12, 80, bounds.centerZ + 38);
+  camera.lookAt(controls.target);
+  camera.updateMatrixWorld(true);
+  const points = floorOutlines(floor).flat().map(([x, z]) => new THREE.Vector3(x, 0, z).applyMatrix4(camera.matrixWorldInverse));
+  const projectedWidth = Math.max(...points.map((p) => p.x)) - Math.min(...points.map((p) => p.x));
+  const projectedHeight = Math.max(...points.map((p) => p.y)) - Math.min(...points.map((p) => p.y));
+  const frustum = Math.max(projectedHeight / 2, projectedWidth / aspect / 2) * 1.22;
 
   camera.left = -frustum * aspect;
   camera.right = frustum * aspect;
@@ -541,11 +514,7 @@ const fitCameraToFloor = () => {
   camera.bottom = -frustum;
   camera.near = 0.1;
   camera.far = 500;
-  camera.zoom = isPortrait ? 1 : 1.18;
-  if (isPortrait) camera.position.set(bounds.centerX + 42, 34, bounds.centerZ + 7);
-  else camera.position.set(bounds.centerX + 35, 31, bounds.centerZ + 34);
-  controls.target.set(bounds.centerX, 0, bounds.centerZ);
-  camera.lookAt(controls.target);
+  camera.zoom = 1;
   camera.updateProjectionMatrix();
   controls.update();
 
@@ -554,9 +523,48 @@ const fitCameraToFloor = () => {
     target: controls.target.clone(),
     zoom: camera.zoom,
   };
+  if (previous) {
+    camera.position.copy(previous.position);
+    controls.target.copy(previous.target);
+    camera.zoom = previous.zoom;
+    camera.updateProjectionMatrix();
+    controls.update();
+  }
+  renderedViewKey = nextKey;
+};
+
+const focusSelectedRoom = () => {
+  const room = activeRoom();
+  if (!webglAvailable || !controls || !room) return;
+  const stair = connectors.find((item) => item.id === accessForRoom(room).stairId);
+  const points = stair ? [...room.polygon, ...stair.polygon] : room.polygon;
+  const bounds = polygonBounds(points);
+  const target = new THREE.Vector3(bounds.centerX, 0, bounds.centerZ);
+  const initialTarget = controls.target.clone();
+  const initialPosition = camera.position.clone();
+  const delta = target.clone().sub(initialTarget);
+  const initialZoom = camera.zoom;
+  const finalZoom = Math.max(initialZoom, 1.25);
+  const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 220;
+  const start = performance.now();
+  cancelAnimationFrame(cameraFrame);
+  const frame = (now) => {
+    const progress = duration ? Math.min(1, (now - start) / duration) : 1;
+    const eased = 1 - (1 - progress) ** 3;
+    controls.target.copy(initialTarget).addScaledVector(delta, eased);
+    camera.position.copy(initialPosition).addScaledVector(delta, eased);
+    camera.zoom = initialZoom + (finalZoom - initialZoom) * eased;
+    camera.updateProjectionMatrix();
+    controls.update();
+    renderScene();
+    if (progress < 1) cameraFrame = requestAnimationFrame(frame);
+  };
+  cameraFrame = requestAnimationFrame(frame);
 };
 
 const resizeRenderer = () => {
+  if (state.view !== 'indoor') return;
+  if (!webglAvailable) { renderFallbackMap(); return; }
   if (!webglAvailable || !renderer || !labelRenderer) return;
   const width = Math.max(els.mapViewport.clientWidth, 1);
   const height = Math.max(els.mapViewport.clientHeight, 1);
@@ -569,19 +577,12 @@ const resizeRenderer = () => {
 };
 
 const nearestStairName = (space) => {
-  const floorConnectors = connectorsOnFloor(space.floorId);
-  if (!floorConnectors.length) return "Na tej kondygnacji nie oznaczono klatki schodowej.";
-  const [x, z] = space.labelPoint;
-  const nearest = [...floorConnectors].sort((a, b) => {
-    const da = Math.hypot(a.labelPoint[0] - x, a.labelPoint[1] - z);
-    const db = Math.hypot(b.labelPoint[0] - x, b.labelPoint[1] - z);
-    return da - db;
-  })[0];
-  const all = floorConnectors;
-  const position = all.length > 1
-    ? all.indexOf(nearest) === 0 ? "lewa" : all.indexOf(nearest) === all.length - 1 ? "prawa" : "środkowa"
-    : "główna";
-  return `Najbliższa klatka schodowa: ${position}.`;
+  const access = accessForRoom(space);
+  if (access.stairName) return `Dojście: ${access.stairName} klatka schodowa.`;
+  if (space.id === '37') return 'Dojście środkową lub prawą klatką schodową.';
+  if (access.campusLocationId === 'hairdressing') return 'Wejście od uliczki między budynkami. Bez przejścia do gastronomii.';
+  if (access.campusLocationId === 'gastronomy') return 'Wejście od strony boiska. Bez przejścia do fryzjerstwa.';
+  return 'Sprawdź oznaczenia schodów na planie.';
 };
 
 const renderBuildingControls = () => {
@@ -626,6 +627,11 @@ const renderFloorHeader = () => {
 
 const renderSelected = () => {
   const selected = activeRoom();
+  els.selectedPanel.hidden = !selected;
+  els.roomOnCampus.hidden = !selected;
+  els.selectedPanel.classList.toggle('is-expanded', state.detailsExpanded);
+  els.detailsToggle.setAttribute('aria-expanded', String(state.detailsExpanded));
+  els.detailsToggle.querySelector('span').textContent = state.detailsExpanded ? 'Zwiń szczegóły' : 'Szczegóły dojścia';
   if (!selected) {
     const floor = currentFloor();
     els.selectedPanel.classList.add("is-empty");
@@ -642,13 +648,15 @@ const renderSelected = () => {
   const building = buildingById(floor.buildingId);
   els.selectedPanel.classList.remove("is-empty");
   els.selectedTitle.textContent = selected.name;
-  els.selectedMeta.textContent = `${building.name}, ${floor.title}`;
+  els.selectedCategory.textContent = roomTypes[roomTypeFor(selected)];
+  els.selectedPanel.dataset.roomType = roomTypeFor(selected);
+  els.selectedMeta.textContent = `${building.name}, ${selected.levelLabel || floor.title}`;
   els.selectedHint.textContent = selected.hint;
   els.selectedStairs.textContent = nearestStairName(selected);
   els.shareRoom.hidden = false;
   els.shareText.textContent = "Udostępnij salę";
   els.shareRoom.dataset.icon = "share";
-  els.mapStatus.textContent = `${selected.name}. ${floor.title}. ${selected.hint}`;
+  els.mapStatus.textContent = `${selected.name}. ${floor.title}.`;
 };
 
 const renderResults = () => {
@@ -695,7 +703,7 @@ const renderFallbackMap = () => {
   els.fallbackMap.innerHTML = `
     <svg
       viewBox="${bounds.minX - padding} ${bounds.minZ - padding} ${bounds.width + padding * 2} ${bounds.depth + padding * 2}"
-      role="img"
+      role="group"
       aria-labelledby="fallbackTitle fallbackDesc"
       preserveAspectRatio="xMidYMid meet"
     >
@@ -711,7 +719,7 @@ const renderFallbackMap = () => {
         <polygon class="svg-structure" points="${polygonPoints(space.polygon)}" />
       `).join("")}
       ${spacesOnFloor(floor.id).map((space) => `
-        <g class="svg-room room-type-${roomTypeFor(space)}${space.id === selectedId ? " is-selected" : ""}" data-svg-room="${space.id}">
+        <g class="svg-room room-type-${roomTypeFor(space)}${space.id === selectedId ? " is-selected" : ""}" data-svg-room="${space.id}" role="button" tabindex="0" aria-label="${space.name}" aria-pressed="${space.id === selectedId}">
           <title>${space.name}</title>
           <polygon points="${polygonPoints(space.polygon)}" />
           <text x="${space.labelPoint[0]}" y="${space.labelPoint[1]}" text-anchor="middle" dominant-baseline="middle">${shortRoomLabel(space)}</text>
@@ -720,148 +728,71 @@ const renderFallbackMap = () => {
       ${connectorsOnFloor(floor.id).map((connector) => `
         <g class="svg-stairs">
           <polygon points="${polygonPoints(connector.polygon)}" />
-          ${Array.from({ length: 6 }, (_, index) => {
-            const stairBounds = polygonBounds(connector.polygon);
-            const z = stairBounds.minZ + ((index + 1) / 7) * stairBounds.depth;
-            return `<line x1="${stairBounds.minX + stairBounds.width * 0.12}" y1="${z}" x2="${stairBounds.maxX - stairBounds.width * 0.12}" y2="${z}" />`;
-          }).join("")}
+          ${stairLayout(connector).map((step) => `<rect x="${step.x}" y="${step.z}" width="${step.width}" height="${step.depth}" fill="none" stroke="currentColor" stroke-width="0.06" />`).join("")}
           <text x="${connector.labelPoint[0]}" y="${connector.labelPoint[1]}" text-anchor="middle">Schody</text>
         </g>
       `).join("")}
+      ${landmarksOnFloor(floor.id).map((landmark) => `<g class="svg-entrance"><title>${landmark.label}</title><circle cx="${landmark.point[0]}" cy="${landmark.point[1]}" r="0.65"/><text x="${landmark.point[0]}" y="${landmark.point[1] - 1.2}" text-anchor="middle">${landmark.label}</text></g>`).join('')}
     </svg>
   `;
+  fallbackHome = `${bounds.minX - padding} ${bounds.minZ - padding} ${bounds.width + padding * 2} ${bounds.depth + padding * 2}`;
+  const svg = els.fallbackMap.querySelector('svg');
+  if (els.mapViewport.clientWidth < 700) {
+    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    group.setAttribute('transform', 'rotate(-90)');
+    group.append(...svg.children);
+    svg.append(group);
+    group.querySelectorAll('text').forEach((text) => {
+      text.setAttribute('transform', `rotate(90 ${text.getAttribute('x')} ${text.getAttribute('y')})`);
+    });
+    fallbackHome = `${bounds.minZ - padding} ${-bounds.maxX - padding} ${bounds.depth + padding * 2} ${bounds.width + padding * 2}`;
+  }
+  svg.setAttribute('viewBox', fallbackViews.get(viewKey()) || fallbackHome);
+  resizeFallbackText();
 };
 
-const campusMapState = {
-  map: null,
-  locationLayers: new Map(),
-  locationLabels: new Map(),
+const resizeFallbackText = () => {
+  const svg = els.fallbackMap.querySelector('svg');
+  if (!svg) return;
+  const [, , width, height] = svg.getAttribute('viewBox').split(' ').map(Number);
+  const scale = Math.max(width / Math.max(svg.clientWidth, 1), height / Math.max(svg.clientHeight, 1));
+  svg.querySelectorAll('.svg-room text').forEach((text) => { text.style.fontSize = `${12 * scale}px`; });
+  svg.querySelectorAll('.svg-stairs text').forEach((text) => { text.style.fontSize = `${9 * scale}px`; });
 };
 
-const campusColors = () => {
-  const styles = getComputedStyle(document.documentElement);
-  return {
-    accent: styles.getPropertyValue("--accent").trim(),
-    accentStrong: styles.getPropertyValue("--accent-strong").trim(),
-    line: styles.getPropertyValue("--line").trim(),
-    surface: styles.getPropertyValue("--surface-strong").trim(),
-    ink: styles.getPropertyValue("--ink").trim(),
-  };
-};
-
-const locationStyle = (locationId) => {
-  const colors = campusColors();
-  const selected = locationId === state.campusLocationId;
-  return {
-    color: selected ? colors.accentStrong : colors.ink,
-    weight: selected ? 4 : 2,
-    fillColor: selected ? colors.accent : colors.surface,
-    fillOpacity: selected ? 0.72 : 0.52,
-  };
-};
-
-const updateCampusLayerStyles = () => {
-  campusMapState.locationLayers.forEach((layer, locationId) => {
-    layer.setStyle(locationStyle(locationId));
-  });
-  campusMapState.locationLabels.forEach((label, locationId) => {
-    label.getElement()?.classList.toggle("is-selected", locationId === state.campusLocationId);
-  });
+let campusMap = null;
+const campusDetails = {
+  main: 'Parter, trzy piętra i piwnica. Sekretariat uczniowski: sala 1 na parterze.',
+  gym: 'Sala gimnastyczna i jej zaplecze, w tym część budynku oznaczona numerem 7.',
+  gastronomy: 'Wejście od strony boiska. Oddzielna część budynku, bez przejścia do fryzjerstwa.',
+  hairdressing: 'Wejście od uliczki między budynkami. Sale prF2 i prF3; bez przejścia do gastronomii.',
 };
 
 const renderCampusSelection = () => {
   const selected = campusLocations.find((location) => location.id === state.campusLocationId) || campusLocations[0];
-  els.campusLocationSwitch.querySelectorAll("[data-campus-location]").forEach((button) => {
-    button.setAttribute("aria-pressed", String(button.dataset.campusLocation === selected.id));
+  els.campusLocationSwitch.querySelectorAll('[data-campus-location]').forEach((button) => {
+    button.setAttribute('aria-pressed', String(button.dataset.campusLocation === selected.id));
+  });
+  document.querySelectorAll('[data-campus-mode]').forEach((button) => {
+    if (button.tagName === 'BUTTON') button.setAttribute('aria-pressed', String(button.dataset.campusMode === state.campusMode));
   });
   els.campusDetailTitle.textContent = selected.name;
-  els.campusDetailText.textContent = selected.detail;
-  updateCampusLayerStyles();
+  els.campusDetailText.textContent = campusDetails[selected.id];
+  els.returnToRoom.hidden = !state.activeRoomId;
+  els.returnToRoom.querySelector('span').textContent = activeRoom() ? `Wróć: ${shortRoomLabel(activeRoom())}` : 'Wróć do sali';
+  campusMap?.show({ locationId: selected.id, mode: state.campusMode });
 };
 
-const selectCampusLocation = (locationId, focusMap = true) => {
-  const location = campusLocations.find((item) => item.id === locationId);
-  if (!location) return;
-  state.campusLocationId = location.id;
+const selectCampusLocation = (locationId) => {
+  if (!campusLocations.some((location) => location.id === locationId)) return;
+  state.campusLocationId = locationId;
+  syncUrl();
   renderCampusSelection();
-  const layer = campusMapState.locationLayers.get(location.id);
-  if (focusMap && layer && campusMapState.map) {
-    campusMapState.map.flyToBounds(layer.getBounds(), {
-      padding: [70, 70],
-      maxZoom: 20,
-      animate: !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    });
-  }
+  campusMap?.select(locationId, { focus: true });
 };
 
 const initializeCampusMap = () => {
-  if (campusMapState.map) return;
-  const map = L.map(els.campusMap, {
-    zoomControl: true,
-    attributionControl: true,
-    minZoom: 17,
-    maxZoom: 21,
-  });
-  campusMapState.map = map;
-
-  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    maxNativeZoom: 19,
-    maxZoom: 21,
-  }).addTo(map);
-  map.fitBounds(campusBounds, { padding: [20, 20] });
-
-  L.geoJSON(campusPitch, {
-    interactive: false,
-    style: {
-      color: "#39734f",
-      weight: 2,
-      fillColor: "#63b77a",
-      fillOpacity: 0.35,
-    },
-  }).addTo(map).bindTooltip("Zielone boisko", {
-    permanent: true,
-    direction: "center",
-    className: "campus-label campus-pitch-label",
-  });
-
-  campusLocations.forEach((location) => {
-    const layer = L.geoJSON({
-      type: "Feature",
-      properties: { id: location.id, name: location.name },
-      geometry: location.geometry,
-    }, {
-      style: locationStyle(location.id),
-    }).addTo(map);
-    layer.on("click", () => selectCampusLocation(location.id, false));
-    campusMapState.locationLayers.set(location.id, layer);
-    const label = L.tooltip({
-      permanent: true,
-      direction: "center",
-      className: `campus-label${["gastronomy", "hairdressing"].includes(location.id) ? " campus-workshop-label" : ""}`,
-    })
-      .setLatLng(layer.getBounds().getCenter())
-      .setContent(location.mapLabel)
-      .addTo(map);
-    campusMapState.locationLabels.set(location.id, label);
-  });
-
-  campusEntrances.forEach((entrance) => {
-    const marker = L.circleMarker(entrance.coordinates, {
-      radius: 7,
-      color: "#7a3218",
-      weight: 3,
-      fillColor: "#f6a45f",
-      fillOpacity: 1,
-    }).addTo(map);
-    marker.bindTooltip(entrance.name, {
-      direction: "right",
-      offset: [8, 0],
-      className: "campus-entrance-label",
-    });
-    marker.on("click", () => selectCampusLocation(entrance.locationId, false));
-  });
-
+  if (!campusMap) campusMap = createCampusMap({ container: els.campusMap, onSelect: selectCampusLocation });
   renderCampusSelection();
 };
 
@@ -874,8 +805,7 @@ const renderView = () => {
   if (campusActive) {
     window.requestAnimationFrame(() => {
       initializeCampusMap();
-      campusMapState.map.invalidateSize(false);
-      campusMapState.map.fitBounds(campusBounds, { padding: [20, 20], animate: false });
+      campusMap.resize();
     });
   }
 };
@@ -891,6 +821,8 @@ const render = ({ rebuild = true } = {}) => {
   renderFloorHeader();
   renderSelected();
   renderResults();
+  document.querySelectorAll('[data-map-mode]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.mapMode === state.mode)));
+  els.mapViewport.dataset.mode = state.mode;
   if (rebuild) rebuildScene();
 };
 
@@ -901,20 +833,30 @@ const syncUrl = (replace = false) => {
   else url.searchParams.delete("room");
   if (state.view === "campus") url.searchParams.set("view", "campus");
   else url.searchParams.delete("view");
-  url.searchParams.delete("fallback");
+  url.searchParams.set("mode", state.mode);
+  if (state.view === 'campus') {
+    url.searchParams.set('location', state.campusLocationId);
+    if (state.campusMode === 'surroundings') url.searchParams.set('context', 'surroundings');
+    else url.searchParams.delete('context');
+  } else {
+    url.searchParams.delete('location');
+    url.searchParams.delete('context');
+  }
   const method = replace ? "replaceState" : "pushState";
-  history[method]({}, "", url);
+  if (replace || url.href !== window.location.href) history[method]({}, "", url);
 };
 
 const setView = (view, sync = true) => {
   if (view !== "indoor" && view !== "campus") return;
+  cancelAnimationFrame(cameraFrame);
   state.view = view;
   if (sync) syncUrl();
   render({ rebuild: view === "indoor" });
 };
 
 const setBuilding = (buildingId, sync = true) => {
-  const firstFloor = floorsForBuilding(buildingId)[0];
+  const available = floorsForBuilding(buildingId);
+  const firstFloor = available.find((floor) => floor.level === 0) || available[0];
   if (!firstFloor) return;
   state.buildingId = buildingId;
   state.floorId = firstFloor.id;
@@ -934,14 +876,23 @@ const setFloor = (floorId, sync = true) => {
 };
 
 const selectRoom = (roomId, sync = true) => {
-  const selected = spaces.find((space) => space.id === roomId);
+  const selected = findRoom(roomId);
   if (!selected) return;
   const floor = floorById(selected.floorId);
   state.activeRoomId = selected.id;
   state.floorId = floor.id;
   state.buildingId = floor.buildingId;
+  state.view = 'indoor';
+  state.detailsExpanded = false;
   if (sync) syncUrl();
   render();
+  focusSelectedRoom();
+  if (window.innerWidth <= 900) {
+    const rect = els.mapViewport.getBoundingClientRect();
+    if (rect.bottom < 120 || rect.top > window.innerHeight - 80) {
+      els.mapViewport.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+    }
+  }
 };
 
 const openCampusLocationIndoor = () => {
@@ -971,17 +922,20 @@ const openCampusLocationIndoor = () => {
 };
 
 const resetHomeView = () => {
+  cancelAnimationFrame(cameraFrame);
+  if (!webglAvailable) {
+    fallbackViews.delete(viewKey());
+    renderFallbackMap();
+    return;
+  }
   if (!homeView || !controls) return;
-  camera.position.copy(homeView.position);
-  controls.target.copy(homeView.target);
-  camera.zoom = homeView.zoom;
-  camera.updateProjectionMatrix();
-  controls.update();
+  fitCameraToFloor(true);
   renderScene();
 };
 
 const handleMapPointer = (event, select) => {
   if (!webglAvailable || !renderer) return;
+  if (event.target.closest('[data-label-room], .map-landmark-label')) return;
   if (event.target.closest("button, .map-status") || (!select && event.buttons)) {
     setHoveredRoom(null);
     return;
@@ -1000,8 +954,8 @@ const handleMapPointer = (event, select) => {
 const setHoveredRoom = (roomId, event = null) => {
   if (hoveredRoomId !== roomId) {
     const previousMesh = roomMeshes.get(hoveredRoomId);
-    previousMesh?.material?.forEach((material) => {
-      material.emissiveIntensity = 0;
+    previousMesh?.material?.forEach((material, index) => {
+      material.color.copy(previousMesh.userData.baseColors[index]);
     });
     roomLabels.get(hoveredRoomId)?.classList.remove("is-hovered");
 
@@ -1009,8 +963,7 @@ const setHoveredRoom = (roomId, event = null) => {
     const nextMesh = roomMeshes.get(roomId);
     if (nextMesh && !nextMesh.userData.selected) {
       nextMesh.material.forEach((material) => {
-        material.emissive.set(scenePalette().accent);
-        material.emissiveIntensity = 0.12;
+        material.color.lerp(new THREE.Color(scenePalette().accent), 0.16);
       });
     }
     roomLabels.get(roomId)?.classList.add("is-hovered");
@@ -1027,13 +980,14 @@ const setHoveredRoom = (roomId, event = null) => {
   roomHoverTooltip.hidden = false;
   const viewportRect = els.mapViewport.getBoundingClientRect();
   const margin = 10;
-  const pointerX = event.clientX - viewportRect.left;
-  const pointerY = event.clientY - viewportRect.top;
+  const scale = viewportRect.width / els.mapViewport.clientWidth;
+  const pointerX = (event.clientX - viewportRect.left) / scale;
+  const pointerY = (event.clientY - viewportRect.top) / scale;
   const tooltipWidth = roomHoverTooltip.offsetWidth;
   const tooltipHeight = roomHoverTooltip.offsetHeight;
   const left = Math.min(
     Math.max(pointerX + 14, margin),
-    viewportRect.width - tooltipWidth - margin,
+    els.mapViewport.clientWidth - tooltipWidth - margin,
   );
   const top = Math.max(margin, pointerY - tooltipHeight - 14);
   roomHoverTooltip.style.left = `${left}px`;
@@ -1062,6 +1016,9 @@ const shareSelectedRoom = async () => {
   url.searchParams.set("floor", selected.floorId);
   url.searchParams.set("room", selected.id);
   url.searchParams.delete("fallback");
+  url.searchParams.delete('view');
+  url.searchParams.delete('location');
+  url.searchParams.delete('context');
   const floor = floorById(selected.floorId);
   const shareData = {
     title: selected.name,
@@ -1089,7 +1046,28 @@ els.buildingButtons.addEventListener("click", (event) => {
 });
 
 els.indoorView.addEventListener("click", () => setView("indoor"));
-els.campusView.addEventListener("click", () => setView("campus"));
+els.campusView.addEventListener("click", () => {
+  if (activeRoom()) state.campusLocationId = accessForRoom(activeRoom()).campusLocationId;
+  setView("campus");
+});
+els.roomOnCampus.addEventListener('click', () => {
+  if (!activeRoom()) return;
+  state.campusLocationId = accessForRoom(activeRoom()).campusLocationId;
+  setView('campus');
+});
+els.returnToRoom.addEventListener('click', () => setView('indoor'));
+els.detailsToggle.addEventListener('click', () => { state.detailsExpanded = !state.detailsExpanded; renderSelected(); });
+document.querySelectorAll('[data-quick-room]').forEach((button) => button.addEventListener('click', () => selectRoom(button.dataset.quickRoom)));
+document.querySelectorAll('[data-map-mode]').forEach((button) => button.addEventListener('click', () => {
+  state.mode = button.dataset.mapMode;
+  syncUrl();
+  render();
+}));
+document.querySelectorAll('button[data-campus-mode]').forEach((button) => button.addEventListener('click', () => {
+  state.campusMode = button.dataset.campusMode;
+  syncUrl();
+  renderCampusSelection();
+}));
 els.campusLocationSwitch.addEventListener("click", (event) => {
   const button = event.target.closest("[data-campus-location]");
   if (button) selectCampusLocation(button.dataset.campusLocation);
@@ -1127,16 +1105,37 @@ els.searchClear.addEventListener("click", () => {
   renderResults();
 });
 
-els.zoomIn.addEventListener("click", () => {
-  camera.zoom = Math.min(camera.zoom * 1.18, controls?.maxZoom || 2.8);
+const zoomMap = (factor) => {
+  cancelAnimationFrame(cameraFrame);
+  if (!webglAvailable) {
+    const svg = els.fallbackMap.querySelector('svg');
+    if (!svg) return;
+    const [x, y, width, height] = svg.getAttribute('viewBox').split(' ').map(Number);
+    const homeWidth = Number(fallbackHome.split(' ')[2]);
+    const nextWidth = Math.max(homeWidth / 3, Math.min(homeWidth * 1.4, width / factor));
+    const nextHeight = height * nextWidth / width;
+    const viewBox = `${x + (width - nextWidth) / 2} ${y + (height - nextHeight) / 2} ${nextWidth} ${nextHeight}`;
+    svg.setAttribute('viewBox', viewBox);
+    fallbackViews.set(viewKey(), viewBox);
+    resizeFallbackText();
+    return;
+  }
+  camera.zoom = Math.max(controls.minZoom, Math.min(camera.zoom * factor, controls.maxZoom));
   camera.updateProjectionMatrix();
   renderScene();
-});
+};
+els.zoomIn.addEventListener('click', () => zoomMap(1.18));
+els.zoomOut.addEventListener('click', () => zoomMap(1 / 1.18));
 
-els.zoomOut.addEventListener("click", () => {
-  camera.zoom = Math.max(camera.zoom / 1.18, controls?.minZoom || 0.7);
-  camera.updateProjectionMatrix();
-  renderScene();
+document.querySelector('#panMap').addEventListener('click', (event) => {
+  const button = event.currentTarget;
+  const enabled = button.getAttribute('aria-pressed') !== 'true';
+  button.setAttribute('aria-pressed', String(enabled));
+  if (controls) {
+    controls.touches.ONE = enabled ? THREE.TOUCH.PAN : null;
+    labelRenderer.domElement.style.touchAction = enabled ? 'none' : 'pan-y';
+  }
+  els.fallbackMap.style.touchAction = enabled ? 'none' : 'pan-y';
 });
 
 els.resetView.addEventListener("click", resetHomeView);
@@ -1146,13 +1145,77 @@ els.mapViewport.addEventListener("pointerleave", () => {
   els.mapViewport.classList.remove("is-pointing");
   setHoveredRoom(null);
 });
-els.mapViewport.addEventListener("pointerdown", () => setHoveredRoom(null));
-els.mapViewport.addEventListener("click", (event) => handleMapPointer(event, true));
+els.mapViewport.addEventListener('pointerdown', (event) => {
+  pointerStart = [event.clientX, event.clientY];
+  mapDragged = false;
+  setHoveredRoom(null);
+});
+els.mapViewport.addEventListener('pointermove', (event) => {
+  if (pointerStart && event.buttons && Math.hypot(event.clientX - pointerStart[0], event.clientY - pointerStart[1]) > 5) mapDragged = true;
+});
+els.mapViewport.addEventListener('click', (event) => { if (!mapDragged) handleMapPointer(event, true); pointerStart = null; });
+els.mapViewport.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') { setHoveredRoom(null); return; }
+  if (event.target !== els.mapViewport) return;
+  if (event.key === '+' || event.key === '=') { event.preventDefault(); zoomMap(1.18); }
+  if (event.key === '-') { event.preventDefault(); zoomMap(1 / 1.18); }
+  if (event.key === 'Home') { event.preventDefault(); resetHomeView(); }
+  const directions = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
+  if (!directions[event.key]) return;
+  event.preventDefault();
+  const [x, y] = directions[event.key];
+  if (webglAvailable) {
+    const distance = (camera.right - camera.left) / camera.zoom / 12;
+    const delta = new THREE.Vector3(x * distance, y * distance, 0).applyQuaternion(camera.quaternion);
+    camera.position.add(delta); controls.target.add(delta); controls.update(); renderScene();
+  } else {
+    const svg = els.fallbackMap.querySelector('svg');
+    const view = svg.getAttribute('viewBox').split(' ').map(Number);
+    view[0] += x * view[2] / 12; view[1] -= y * view[3] / 12;
+    svg.setAttribute('viewBox', view.join(' ')); fallbackViews.set(viewKey(), view.join(' '));
+  }
+});
 
 els.fallbackMap.addEventListener("click", (event) => {
   const roomElement = event.target.closest("[data-svg-room]");
-  if (roomElement) selectRoom(roomElement.dataset.svgRoom);
+  if (roomElement && !mapDragged) selectRoom(roomElement.dataset.svgRoom);
 });
+els.fallbackMap.addEventListener('keydown', (event) => {
+  const roomElement = event.target.closest('[data-svg-room]');
+  if (roomElement && ['Enter', ' '].includes(event.key)) {
+    event.preventDefault();
+    const id = roomElement.dataset.svgRoom;
+    selectRoom(id);
+    els.fallbackMap.querySelector(`[data-svg-room="${id}"]`)?.focus({ preventScroll: true });
+  }
+});
+els.fallbackMap.addEventListener('focusin', (event) => {
+  const roomElement = event.target.closest('[data-svg-room]');
+  if (!roomElement) return;
+  const rect = roomElement.getBoundingClientRect();
+  setHoveredRoom(roomElement.dataset.svgRoom, { clientX: rect.x, clientY: rect.y });
+});
+els.fallbackMap.addEventListener('focusout', () => setHoveredRoom(null));
+let fallbackDrag = null;
+els.fallbackMap.addEventListener('pointerdown', (event) => {
+  if (document.querySelector('#panMap').getAttribute('aria-pressed') !== 'true') return;
+  const svg = els.fallbackMap.querySelector('svg');
+  const matrix = svg?.getScreenCTM();
+  if (!matrix) return;
+  const inverse = matrix.inverse();
+  fallbackDrag = { point: new DOMPoint(event.clientX, event.clientY).matrixTransform(inverse), inverse, svg, view: svg.getAttribute('viewBox').split(' ').map(Number) };
+  els.fallbackMap.setPointerCapture(event.pointerId);
+});
+els.fallbackMap.addEventListener('pointermove', (event) => {
+  if (!fallbackDrag) return;
+  const { point, inverse, view, svg } = fallbackDrag;
+  const next = new DOMPoint(event.clientX, event.clientY).matrixTransform(inverse);
+  const value = [view[0] - (next.x - point.x), view[1] - (next.y - point.y), view[2], view[3]].join(' ');
+  svg.setAttribute('viewBox', value);
+  fallbackViews.set(viewKey(), value);
+});
+els.fallbackMap.addEventListener('pointerup', () => { fallbackDrag = null; });
+els.fallbackMap.addEventListener('pointercancel', () => { fallbackDrag = null; });
 els.fallbackMap.addEventListener("pointermove", (event) => {
   const roomElement = event.target.closest("[data-svg-room]");
   setHoveredRoom(roomElement?.dataset.svgRoom || null, event);
@@ -1160,20 +1223,8 @@ els.fallbackMap.addEventListener("pointermove", (event) => {
 els.fallbackMap.addEventListener("pointerleave", () => setHoveredRoom(null));
 
 window.addEventListener("popstate", () => {
-  const url = new URL(window.location.href);
-  state.view = url.searchParams.get("view") === "campus" ? "campus" : "indoor";
-  const roomFromUrl = spaces.find((space) => space.id === url.searchParams.get("room"));
-  const floorFromUrl = floorById(url.searchParams.get("floor"));
-  if (roomFromUrl) {
-    const floor = floorById(roomFromUrl.floorId);
-    state.activeRoomId = roomFromUrl.id;
-    state.floorId = floor.id;
-    state.buildingId = floor.buildingId;
-  } else if (floorFromUrl) {
-    state.activeRoomId = null;
-    state.floorId = floorFromUrl.id;
-    state.buildingId = floorFromUrl.buildingId;
-  }
+  Object.assign(state, readNavigation(new URL(window.location.href), window.innerWidth <= 900));
+  if (!webglAvailable) state.mode = '2d';
   render();
 });
 
@@ -1184,9 +1235,10 @@ els.mapViewport.classList.toggle("has-fallback", !webglAvailable);
 els.canvas.hidden = !webglAvailable;
 els.fallbackMap.hidden = webglAvailable;
 if (!webglAvailable) {
-  els.zoomIn.hidden = true;
-  els.zoomOut.hidden = true;
-  els.resetView.hidden = true;
+  state.mode = '2d';
+  const perspectiveButton = document.querySelector('[data-map-mode="2.5d"]');
+  perspectiveButton.disabled = true;
+  perspectiveButton.title = 'Widok 2.5D wymaga WebGL';
 }
 
 const resizeObserver = new ResizeObserver(resizeRenderer);
@@ -1195,3 +1247,15 @@ resizeObserver.observe(els.mapViewport);
 render({ rebuild: true });
 syncUrl(true);
 resizeRenderer();
+document.fonts.ready.then(() => { renderScene(); campusMap?.resize(); });
+
+window.addEventListener('pagehide', (event) => {
+  cancelAnimationFrame(cameraFrame);
+  if (event.persisted) return;
+  resizeObserver.disconnect();
+  controls?.dispose();
+  labelRenderer?.dispose();
+  clearFloorGroup();
+  renderer?.dispose();
+  campusMap?.destroy();
+});

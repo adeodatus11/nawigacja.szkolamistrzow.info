@@ -1,0 +1,198 @@
+/* Map-first layout. The school logo and Jost remain the identity anchors. */
+:root {
+  --header-height: 80px;
+  --radius: 6px;
+  --page: #f4f6f7;
+  --surface: #ffffff;
+  --surface-strong: #ffffff;
+  --surface-muted: #e8edef;
+  --line: #ccd3d7;
+  --ink: #242a2d;
+  --muted: #58636b;
+  --map-background: #f1f4f5;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #191c1e;
+    --surface: #22272a;
+    --surface-strong: #292f33;
+    --surface-muted: #353d42;
+    --line: #56626a;
+    --ink: #f4f6f7;
+    --muted: #c3cbd0;
+    --map-background: #1c2226;
+  }
+}
+.skip-link { position: fixed; top: -100px; left: 12px; z-index: 2000; padding: 12px; background: var(--surface); color: var(--ink); }
+body { overflow: auto; }
+.skip-link:focus { top: 8px; }
+.topbar { height: var(--header-height); min-height: 0; padding: 8px 24px; border-bottom-width: 2px; }
+.brand-logo { height: 60px; }
+.view-switch button { min-height: 44px; border-width: 1px; padding: 0 16px; font-size: .94rem; }
+.view-switch button[aria-pressed=true], .building-button[aria-pressed=true], .floor-button[aria-pressed=true], .campus-location-switch button[aria-pressed=true], .share-button, .campus-detail button { box-shadow: none; }
+.app-shell { gap: 0; padding: 0; grid-template-columns: 320px minmax(0, 1fr); }
+.search-panel, .sidebar, .map-panel, .campus-panel { border: 0; border-radius: 0; box-shadow: none; }
+.search-panel, .sidebar { border-right: 1px solid var(--line); }
+.search-panel { padding: 18px 16px 12px; }
+.search-panel > label { font-size: .9rem; }
+.search-control input { min-height: 48px; padding-right: 48px; font-size: 1rem; }
+.clear-button { width: 44px; height: 44px; display: grid; place-items: center; padding: 0; }
+.sidebar { padding: 0 16px 16px; }
+.selected-panel { border: 0; border-top: 3px solid var(--accent); border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; padding: 16px 0; gap: 8px; }
+.selected-heading h2 { font-size: 1.2rem; line-height: 1.3; }
+.selected-icon { display: none; }
+.selected-panel .selected-category { color: var(--muted); font-size: .8rem; }
+.room-directions { display: grid; gap: 8px; font-size: .92rem; line-height: 1.45; }
+.room-directions p { overflow-wrap: anywhere; }
+.selected-actions, .campus-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.selected-actions { margin-top: 4px; }
+.secondary-button, .details-toggle, .quick-places button { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); padding: 6px 10px; font-weight: 600; }
+.share-button, .secondary-button { font-size: .86rem; white-space: normal; }
+.details-toggle { display: none; }
+.quick-places { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 16px; }
+.quick-places button { font-size: .8rem; }
+.results-section { margin-top: 16px; }
+.room-result { min-height: 62px; border-bottom: 0; padding: 8px 4px; }
+.room-result-copy strong { font-size: .9rem; }
+.room-number { min-height: 38px; min-width: 38px; }
+.map-navigation { padding: 10px 20px; }
+.desktop-map-filters { gap: 8px 20px; }
+.filter-group { gap: 3px; }
+.building-button, .floor-button { font-size: .85rem; padding: 0 10px; }
+.floor-header { min-height: 60px; padding: 8px 20px; }
+.floor-header h2 { font-size: 1.25rem; }
+.floor-summary { position: relative; }
+.floor-summary > p { display: none; }
+.map-legend summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; color: var(--muted); font-size: .85rem; padding: 0 8px; }
+.map-legend summary::after { content: '+'; padding-left: 8px; }
+.map-legend[open] summary::after { content: '−'; }
+.map-legend summary:focus-visible { outline: 3px solid var(--focus); outline-offset: -2px; }
+.room-legend { position: absolute; right: 0; top: 44px; z-index: 8; width: max-content; max-width: 280px; display: grid; justify-content: start; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-strong); box-shadow: 0 4px 12px #0001; }
+.room-legend li { font-size: .8rem; white-space: normal; }
+.room-legend svg { width: 16px; height: 16px; }
+.map-mode-switch { position: absolute; top: 12px; left: 12px; z-index: 3; }
+.map-mode-switch, .campus-mode-switch { display: inline-flex; gap: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); padding: 3px; }
+.map-mode-switch button, .campus-mode-switch button { min-height: 44px; min-width: 58px; border: 0; border-radius: 3px; background: transparent; color: var(--muted); padding: 0 10px; font-size: .85rem; font-weight: 700; }
+.map-mode-switch button[aria-pressed=true], .campus-mode-switch button[aria-pressed=true] { background: var(--ink); color: var(--surface); }
+.map-controls { z-index: 3; }
+.map-controls button[aria-pressed=true] { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.map-viewport { touch-action: pan-y; }
+.map-label-layer { z-index: 1; }
+.map-room-label, .map-landmark-label { position: absolute; pointer-events: auto; min-width: 36px; min-height: 32px; border: 1px solid var(--line); background: var(--surface-strong); color: var(--ink); padding: 4px 6px; font-family: inherit; font-size: .78rem; box-shadow: 0 1px 3px #0001; border-radius: 4px; }
+.map-room-label[data-offset=true] { border-bottom: 2px solid var(--muted); }
+.map-room-label.is-selected { border-color: var(--accent); background: var(--accent); color: var(--on-accent); }
+.map-landmark-label { min-width: 32px; min-height: 26px; font-size: .65rem; }
+.map-landmark-label.is-stairs { color: var(--ink); border-color: var(--muted); }
+.leaflet-tooltip.campus-label.campus-street-label { color: var(--ink); background: var(--surface-strong); border: 1px solid var(--muted); padding: 5px 8px; font-size: 12px; font-weight: 700; white-space: nowrap; max-width: none; }
+.map-landmark-label.is-nearest { color: var(--accent-strong); border: 2px solid var(--accent); }
+.map-landmark-label.is-entrance { max-width: 130px; white-space: normal; font-size: .65rem; }
+.map-landmark-label { width: 44px; height: 44px; display: grid; place-items: center; border: 0 !important; box-shadow: none; background: transparent; padding: 0; }
+.map-landmark-label .label-face { padding: 3px; min-height: 22px; border: 1px solid var(--muted); border-radius: 3px; background: var(--surface-strong); }
+.map-landmark-label.is-entrance .label-face { border-color: var(--accent); color: var(--accent); }
+.map-landmark-label.is-nearest .label-face { border: 2px solid var(--accent); }
+.map-viewport:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+.map-room-label:focus-visible, .map-landmark-label:focus-visible { outline-offset: 1px; z-index: 5; }
+.map-room-label, .map-room-label.is-selected, .map-room-label.is-hovered:not(.is-selected) { border: 0; background: transparent; box-shadow: none; padding: 0; color: var(--ink); }
+.map-room-label[data-offset=true] { border: 0; }
+.label-face { display: inline-grid; place-items: center; }
+.map-room-label .label-face { min-width: 26px; min-height: 26px; padding: 3px 5px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface-strong); box-shadow: 0 1px 3px #0001; }
+.map-room-label.is-selected .label-face { border-color: var(--accent); background: var(--accent); color: var(--on-accent); }
+.map-room-label.is-hovered .label-face { border-color: var(--accent); }
+.label-leader { position: absolute; height: 1px; background: var(--muted); transform-origin: left center; pointer-events: none; opacity: .7; }
+.map-status.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; border: 0; display: block; }
+.fallback-map { inset: 56px 10px 10px; touch-action: pan-y; }
+.svg-room:focus-visible { outline: none; }
+.svg-room:focus-visible polygon { stroke: var(--accent); stroke-width: .6; }
+.svg-entrance circle { fill: var(--accent); }
+.svg-entrance text { fill: var(--ink); font-size: .8px; }
+.campus-panel { grid-template-rows: auto auto minmax(0, 1fr); }
+.campus-header { padding: 8px 20px; border-top: 0; gap: 12px; }
+.campus-header h2 { font-size: 1.2rem; }
+.campus-header > a { font-size: .8rem; }
+.campus-location-switch { padding: 8px 20px; }
+.campus-map-area { display: grid; grid-template-rows: minmax(0, 1fr) auto; }
+#campusMap { min-height: 0; height: 100%; background: var(--map-background); }
+.campus-detail { position: static; max-width: none; border: 0; border-top: 1px solid var(--line); border-radius: 0; box-shadow: none; padding: 12px 20px; gap: 12px; }
+.campus-detail button { white-space: normal; }
+.campus-actions { flex-shrink: 0; }
+.leaflet-container { font-family: inherit; }
+.leaflet-control-zoom a { width: 44px; height: 44px; line-height: 44px; background: var(--surface); color: var(--ink); }
+.leaflet-control-zoom a:hover { background: var(--surface-muted); color: var(--ink); }
+.leaflet-touch .leaflet-bar a { width: 44px; height: 44px; line-height: 44px; }
+.campus-reset { display: grid; place-items: center; width: 46px; height: 46px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--ink); }
+.campus-north { display: grid; justify-items: center; padding: 5px; background: var(--surface); color: var(--muted); border-radius: 4px; font-weight: 700; font-size: .75rem; }
+.leaflet-tooltip.campus-label { border: 0; box-shadow: none; background: var(--surface-strong); color: var(--ink); font-size: .82rem; padding: 5px 8px; max-width: 150px; white-space: normal; text-align: center; }
+.leaflet-tooltip.campus-label.is-selected { background: var(--accent); color: var(--on-accent); }
+.leaflet-tooltip.campus-building-label { border-left: 3px solid var(--muted); text-align: left; padding: 7px 10px; background: var(--surface-strong); opacity: 1; }
+.leaflet-tooltip.campus-building-label.is-selected { border-left-color: var(--accent-strong); }
+.leaflet-tooltip.campus-building-label.is-gym:not(.is-selected) { border-left-color: var(--room-gym-line); }
+.leaflet-tooltip.campus-building-label.is-gastronomy:not(.is-selected), .leaflet-tooltip.campus-building-label.is-hairdressing:not(.is-selected) { border-left-color: var(--room-classroom-line); }
+#campusMap[data-campus-mode=scheme] path.leaflet-interactive { filter: drop-shadow(0 4px 0 var(--line)); transition: fill 160ms ease, stroke 160ms ease; }
+#campusMap path.leaflet-interactive:focus-visible { outline: none; stroke: var(--accent); stroke-width: 4px; }
+.campus-pan[aria-pressed=true] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.leaflet-control-scale-line { border-color: var(--muted); background: var(--surface); color: var(--ink); text-shadow: none; }
+.leaflet-tooltip.campus-pitch-label { background: #bdd9c3; color: #214b2e; }
+.campus-entry { background: transparent; border: 0; }
+.campus-entry-button { width: 44px; height: 44px; display: grid; place-items: center; border: 2px solid var(--accent); border-radius: 50%; background: var(--surface); color: var(--accent); }
+.campus-tile-status { position: absolute; top: 12px; left: 72px; right: 48px; z-index: 650; padding: 8px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; font-size: .8rem; }
+.leaflet-control-attribution { max-width: 100%; font-size: .7rem; }
+@media (min-width: 901px) and (max-width: 1150px) {
+  .app-shell { grid-template-columns: 290px minmax(0, 1fr); padding: 0; gap: 0; }
+  .map-navigation { padding: 8px 12px; }
+}
+@media (max-width: 900px) {
+  body { overflow: auto; }
+  .topbar { height: auto; min-height: 64px; padding: 8px 12px; flex-wrap: nowrap; gap: 12px; }
+  .brand { flex-shrink: 1; }
+  .brand-logo { width: 155px; height: auto; max-height: 44px; }
+  .view-switch { width: auto; flex: 0 0 auto; gap: 4px; }
+  .view-switch button { padding: 0 8px; font-size: .8rem; min-height: 44px; gap: 5px; flex: none; }
+  .view-switch button svg { width: 16px; }
+  .app-shell { height: auto; min-height: 0; padding: 0; gap: 0; grid-template-columns: minmax(0, 1fr); grid-template-areas: 'search' 'map' 'sidebar'; grid-template-rows: auto auto auto; }
+  .search-panel { padding: 8px 12px; border-right: 0; }
+  .search-panel > label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .search-control input { min-height: 46px; }
+  .map-navigation { padding: 4px 12px 8px; }
+  .mobile-map-filters { grid-template-columns: minmax(0, 1fr) minmax(0, .8fr); gap: 8px; }
+  .mobile-map-filters label > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .mobile-map-filters select { min-height: 44px; font-size: .86rem; }
+  .floor-header { display: flex; min-height: 50px; padding: 2px 12px; gap: 8px; }
+  .floor-header > div:first-child { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; border-left-width: 3px; padding-left: 8px; flex-shrink: 1; }
+  .floor-header h2 { font-size: 1rem; margin: 0; }
+  #floorContext { display: none; }
+  .floor-summary { margin: 0; flex: 0 0 auto; }
+  .map-viewport { height: 58dvh; min-height: 280px; max-height: 620px; }
+  .map-mode-switch { top: 9px; left: 9px; }
+  .map-room-label { min-width: 44px; min-height: 44px; font-size: .76rem; padding: 2px; }
+  .map-landmark-label { min-height: 28px; min-width: 28px; }
+  .sidebar { padding: 0 12px 18px; border-right: 0; }
+  .selected-panel { padding: 14px 0; }
+  .selected-heading h2 { font-size: 1.16rem; }
+  .selected-category { display: none; }
+  .details-toggle { display: flex; justify-content: space-between; }
+  .room-directions { display: none; }
+  .selected-panel.is-expanded .room-directions { display: grid; }
+  .selected-actions > button { flex: 1; }
+  .campus-header { padding: 8px 12px; flex-wrap: wrap; gap: 8px; }
+  .campus-header h2 { font-size: 1rem; }
+  .campus-header > a { display: none; }
+  .campus-mode-switch { margin-left: auto; }
+  .campus-location-switch { display: grid; grid-template-columns: 1fr 1fr; padding: 6px 12px; gap: 4px; }
+  .campus-location-switch button { padding: 4px 6px; font-size: .78rem; }
+  .app-shell.is-campus { grid-template-rows: auto; }
+  .campus-map-area { display: block; }
+  #campusMap { height: 58dvh; min-height: 300px; }
+  .campus-detail { display: grid; padding: 12px; }
+  .campus-actions > button { flex: 1; font-size: .88rem; }
+  .leaflet-tooltip.campus-label { font-size: .72rem; max-width: 105px; padding: 4px 6px; }
+}
+@media (max-width: 380px) {
+  .topbar { padding: 6px 8px; gap: 6px; min-height: 60px; }
+  .brand-logo { width: 116px; }
+  .view-switch button { font-size: .72rem; padding: 0 6px; }
+  .view-switch button svg { display: none; }
+  .campus-mode-switch button { min-width: 50px; padding: 0 7px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

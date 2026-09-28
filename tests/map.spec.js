@@ -18,7 +18,7 @@ test("wyszukiwanie nie zmienia piętra przed zatwierdzeniem", async ({ page }) =
   await expect(page.locator("#floorTitle")).toHaveText("Parter");
   await expect(page.locator("#selectedTitle")).toHaveText("Wybierz salę");
   await expect(page.locator(".room-result")).toHaveCount(1);
-  await expect(page.locator(".room-result strong")).toContainText("Sala 21");
+  await expect(page.locator(".room-result strong")).toContainText("Sala 20");
 
   await page.locator("#roomSearch").press("Enter");
   await expect(page.locator("#floorTitle")).toHaveText("I piętro");
@@ -57,7 +57,7 @@ test("fallback SVG korzysta z tych samych danych", async ({ page }) => {
   await expect(page.locator("#fallbackMap svg")).toHaveCount(1);
   await expect(page.locator('[data-svg-room="37"]')).toHaveClass(/is-selected/);
   await expect(page.locator(".svg-stairs")).toHaveCount(3);
-  await expect(page.locator(".svg-stairs line")).toHaveCount(18);
+  await expect(page.locator(".svg-stairs rect")).toHaveCount(44);
 });
 
 test("kolory rozróżniają sale lekcyjne, administrację i sale gimnastyczne", async ({ page }) => {
@@ -68,14 +68,14 @@ test("kolory rozróżniają sale lekcyjne, administrację i sale gimnastyczne", 
     "Administracja",
     "Sale gimnastyczne",
   ]);
-  await expect(page.locator('[data-svg-room="7"]')).toHaveClass(/room-type-classroom/);
+  await expect(page.locator('[data-svg-room="6"]')).toHaveClass(/room-type-classroom/);
   await expect(page.locator('[data-svg-room="1"]')).toHaveClass(/room-type-administration/);
   await expect(page.locator('[data-svg-room="8"]')).toHaveClass(/room-type-gym/);
-  await expect(page.locator('[data-room="7"]')).toHaveClass(/room-type-classroom/);
+  await expect(page.locator('[data-room="6"]')).toHaveClass(/room-type-classroom/);
   await expect(page.locator('[data-room="1"]')).toHaveClass(/room-type-administration/);
   await expect(page.locator('[data-room="8"]')).toHaveClass(/room-type-gym/);
 
-  const fills = await Promise.all(["7", "1", "8"].map((roomId) => (
+  const fills = await Promise.all(["6", "1", "8"].map((roomId) => (
     page.locator(`[data-svg-room="${roomId}"] polygon`).evaluate((element) => getComputedStyle(element).fill)
   )));
   expect(new Set(fills).size).toBe(3);
@@ -134,7 +134,7 @@ test("zaktualizowane funkcje pomieszczeń są dostępne pod właściwymi numeram
   const roomCases = [
     ["gim-piwnica", "Sala gimnastyczna, piwnica"],
     ["sklepik", "Sklepik szkolny"],
-    ["6", "Sala 6, pracownia fryzjerska"],
+    ["6", "Sale 6–7, pracownia fryzjerska"],
     ["14", "Sala 14, wicedyrektor Marzena Filusz"],
     ["24", "Sala 24, wicedyrektor Małgorzata Kończyńska"],
     ["36", "Sala 36, wicedyrektor Maciej Najwer"],
@@ -158,21 +158,21 @@ test("parter ma poprawiony układ sal 6 i 7 bez fikcyjnej sali FR", async ({ pag
   });
 
   expect(parter.some(({ id }) => id === "fryz-parter")).toBe(false);
-  expect(parter.find(({ id }) => id === "szatnia")?.polygon).toEqual([[0, 0], [3, 0], [3, 7], [0, 7]]);
-  expect(parter.find(({ id }) => id === "5")?.polygon).toEqual([[3, 0], [15, 0], [15, 7], [3, 7]]);
-  expect(parter.find(({ id }) => id === "7")?.polygon).toEqual([[15, 0], [21, 0], [21, 7], [15, 7]]);
-  expect(parter.find(({ id }) => id === "wc-0")?.polygon).toEqual([[21, 0], [25, 0], [25, 7], [21, 7]]);
-  expect(parter.find(({ id }) => id === "6")?.polygon).toEqual([[25, 0], [39, 0], [39, 7], [25, 7]]);
+  expect(parter.find(({ id }) => id === "szatnia")?.polygon).toEqual([[-11, 0], [0, 0], [0, 7], [-11, 7]]);
+  expect(parter.find(({ id }) => id === "5")?.polygon).toEqual([[0, 0], [10, 0], [10, 7], [0, 7]]);
+  expect(parter.some(({ id }) => id === "7")).toBe(false);
+  expect(parter.find(({ id }) => id === "wc-0")?.polygon).toEqual([[28, 0], [33, 0], [33, 7], [28, 7]]);
+  expect(parter.find(({ id }) => id === "6")?.polygon).toEqual([[10, 0], [28, 0], [28, 7], [10, 7]]);
 
   await expect(page.locator(".map-room-label", { hasText: /^FR$/ })).toHaveCount(0);
   await expect(page.locator(".map-room-label", { hasText: /^05$/ })).toHaveCount(1);
 });
 
-test("dotychczasowy link do sali 5 otwiera salę 05", async ({ page }) => {
+test("sala 5 pozostaje oddzielną salą lekcyjną", async ({ page }) => {
   await page.goto("/?room=5");
 
-  await expect(page.locator("#selectedTitle")).toHaveText("Sala 05");
-  await expect(page.locator(".map-room-label.is-selected")).toHaveText("05");
+  await expect(page.locator("#selectedTitle")).toHaveText("Sala 5");
+  await expect(page.locator(".map-room-label.is-selected")).toHaveText("5");
   await expect(page.locator("#selectedHint")).toContainText("Naprzeciw lewej klatki schodowej");
 });
 
@@ -185,7 +185,7 @@ test("piwnica pokazuje tylko wskazane miejsca, a sala 1a nie występuje", async 
   await expect(page.locator(".room-result")).toHaveCount(0);
 
   await page.goto("/?fallback=1&floor=parter");
-  await expect(page.locator(".svg-structure")).toHaveCount(3);
+  await expect(page.locator(".svg-structure")).toHaveCount(2);
   await expect(page.locator('[data-svg-room="1a"]')).toHaveCount(0);
 });
 
@@ -217,7 +217,8 @@ test("mapa terenu pokazuje wyłącznie właściwe obrysy OSM szkoły", async ({ 
   await expect(page.locator("#campusPanel")).toBeVisible();
   await expect(page.locator(".map-panel")).toBeHidden();
   await expect(page.locator("[data-campus-location]")).toHaveCount(4);
-  expect(await page.locator("#campusMap .leaflet-interactive").count()).toBeGreaterThanOrEqual(6);
+  expect(await page.locator("#campusMap path.leaflet-interactive").count()).toBe(4);
+  await expect(page.locator('.campus-entry-button')).toHaveCount(2);
   await expect(page.locator(".campus-header > a")).toHaveAttribute("href", /openstreetmap\.org/);
 
   const correctedCampus = await page.evaluate(async () => {
